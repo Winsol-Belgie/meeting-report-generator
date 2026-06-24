@@ -10,6 +10,7 @@
 
   <!-- Libraries -->
   <script src="https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
   <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
 
@@ -269,7 +270,6 @@
     <div>
       <h1 class="hero__title">Meeting Report Generator</h1>
       <div class="hero__user">
-        <button class="btn-secondary btn-logout" onclick="openSettings()">⚙ Settings</button>
       </div>
     </div>
     <!-- Logo: replace src with your logo file if available -->
@@ -325,8 +325,9 @@
           </svg>
           <p>Optional — drop files here or click</p>
         </div>
-        <input id="docsInput" type="file" accept=".docx,.txt" multiple style="display:none"
+        <input id="docsInput" type="file" accept=".docx,.txt,.pdf" multiple style="display:none"
                onchange="handleFileSelect(event,'docs')" />
+        <p style="font-size:0.72rem;color:var(--muted);margin:4px 0 0;">.docx · .txt · .pdf — max 10 MB per file.</p>
         <div id="docsList" style="margin-top:8px;"></div>
       </div>
 
@@ -342,6 +343,7 @@
 
     <div class="form-grid">
 
+<<<<<<< HEAD
       <div class="span-2">
         <label class="field-label" for="meetingType">Meeting type <span class="field-required">*</span></label>
         <select id="meetingType" class="field-input">
@@ -435,45 +437,16 @@
 
 </div><!-- /container -->
 
-<!-- ══ SETTINGS MODAL ═════════════════════════════════════════════ -->
-<div id="settingsModal" class="modal-overlay" style="display:none;">
-  <div class="modal-card">
-    <h2>Settings</h2>
-    <p>Cloudflare Worker URL — your secure API proxy. Stored in this browser only.</p>
-    <label class="field-label" for="workerUrlInput">Worker URL</label>
-    <input id="workerUrlInput" type="url" class="field-input"
-           placeholder="https://your-worker.your-subdomain.workers.dev" />
-    <div class="modal-actions">
-      <button class="btn-outline" onclick="closeSettings()">Cancel</button>
-      <button class="primary" onclick="saveSettings()" style="padding:8px 20px;">Save</button>
-    </div>
-  </div>
-</div>
 
 <!-- ══ JAVASCRIPT ═════════════════════════════════════════════════ -->
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────────
-const STORAGE_KEY = 'mrg_worker_url';
-let WORKER_URL = localStorage.getItem(STORAGE_KEY) || '';
+const WORKER_URL = 'https://meeting-report-generator.gwenn-vanthournout.workers.dev/';
 
 // ─── STATE ─────────────────────────────────────────────────────────
 let transcriptText = '';
 let additionalDocs  = [];
 let reportMarkdown  = '';
-
-// ─── SETTINGS ──────────────────────────────────────────────────────
-function openSettings() {
-  document.getElementById('workerUrlInput').value = WORKER_URL;
-  document.getElementById('settingsModal').style.display = 'flex';
-}
-function closeSettings() {
-  document.getElementById('settingsModal').style.display = 'none';
-}
-function saveSettings() {
-  WORKER_URL = document.getElementById('workerUrlInput').value.trim();
-  localStorage.setItem(STORAGE_KEY, WORKER_URL);
-  closeSettings();
-}
 
 // ─── PARTICIPANTS ───────────────────────────────────────────────────
 function addParticipant(name = '', role = '') {
@@ -499,6 +472,25 @@ function getParticipants() {
     .filter(Boolean).join(', ');
 }
 
+// ─── REMOVE FILES ──────────────────────────────────────────────────
+function clearTranscript(e) {
+  e.stopPropagation();
+  transcriptText = '';
+  const zone = document.getElementById('transcriptZone');
+  zone.classList.remove('has-file');
+  document.getElementById('transcriptLabel').textContent = 'Drop file here or click to browse';
+  document.getElementById('transcriptInput').value = '';
+}
+function removeDoc(btn) {
+  const chip = btn.closest('.file-chip');
+  const idx  = parseInt(chip.dataset.idx);
+  additionalDocs.splice(idx, 1);
+  // re-index remaining chips
+  chip.remove();
+  document.querySelectorAll('#docsList .file-chip').forEach((c, i) => c.dataset.idx = i);
+  document.getElementById('docsInput').value = '';
+}
+
 // ─── DRAG & DROP ───────────────────────────────────────────────────
 function handleDragOver(e)  { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
 function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
@@ -516,12 +508,19 @@ function processFiles(files, target) {
 // ─── FILE READING ──────────────────────────────────────────────────
 async function readFile(file, target) {
   const ext = file.name.split('.').pop().toLowerCase();
+  const MAX_FILE_MB = 10;
+  if (target === 'docs' && file.size > MAX_FILE_MB * 1024 * 1024) {
+    showError(`"${file.name}" is too large (max ${MAX_FILE_MB} MB).`);
+    return;
+  }
   let text = '';
   try {
     if (ext === 'docx') {
       const buf = await file.arrayBuffer();
       const result = await mammoth.extractRawText({ arrayBuffer: buf });
       text = result.value;
+    } else if (ext === 'pdf') {
+      text = await extractPdfText(file);
     } else {
       text = await file.text();
     }
@@ -531,17 +530,37 @@ async function readFile(file, target) {
       transcriptText = text;
       const zone = document.getElementById('transcriptZone');
       zone.classList.add('has-file');
-      document.getElementById('transcriptLabel').textContent = '✓ ' + file.name;
+      document.getElementById('transcriptLabel').innerHTML =
+        '✓ ' + file.name +
+        ' <button onclick="clearTranscript(event)" style="margin-left:8px;background:none;border:none;color:#e53e3e;cursor:pointer;font-size:0.85rem;font-weight:700;" title="Remove">✕</button>';
     } else {
+      const idx = additionalDocs.length;
       additionalDocs.push({ name: file.name, text });
       const chip = document.createElement('span');
       chip.className = 'file-chip';
-      chip.textContent = '✓ ' + file.name;
+      chip.dataset.idx = idx;
+      chip.innerHTML = '✓ ' + file.name +
+        ' <button onclick="removeDoc(this)" style="margin-left:4px;background:none;border:none;color:#15803d;cursor:pointer;font-weight:700;font-size:0.8rem;" title="Remove">✕</button>';
       document.getElementById('docsList').appendChild(chip);
     }
   } catch (err) {
     showError('Could not read "' + file.name + '": ' + err.message);
   }
+}
+
+// ─── PDF EXTRACTOR ─────────────────────────────────────────────────
+async function extractPdfText(file) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  let text = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page    = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(item => item.str).join(' ') + '\n';
+  }
+  return text;
 }
 
 // ─── VTT PARSER ────────────────────────────────────────────────────
@@ -568,6 +587,7 @@ function parseVTT(vtt) {
   return result.join('\n');
 }
 
+<<<<<<< HEAD
 // ─── MEETING TYPE DEFINITIONS ──────────────────────────────────────
 const MEETING_TYPES = {
   winsol_project: {
@@ -624,12 +644,21 @@ ${type.guidelines}
 }
 
 function buildUserMessage() {
-  let msg = 'TRANSCRIPTION:\n\n' + transcriptText;
+  const MAX_CHARS = 80000; // ~20k tokens — safe limit for Anthropic API
+  let transcript = transcriptText;
+  let truncated = false;
+  if (transcript.length > MAX_CHARS) {
+    transcript = transcript.slice(0, MAX_CHARS);
+    truncated = true;
+  }
+  let msg = 'TRANSCRIPTION:\n\n' + transcript;
+  if (truncated) msg += '\n\n[... transcript truncated to fit API limits ...]';
   if (additionalDocs.length) {
     msg += '\n\n---\nREFERENCE DOCUMENTS:\n';
     additionalDocs.forEach(d => { msg += '\n[Document: ' + d.name + ']\n' + d.text + '\n'; });
   }
   msg += '\n\nPlease generate the meeting report now.';
+  if (truncated) showError('⚠️ Transcript was truncated (too large) — the last part of the meeting may be missing from the report.');
   return msg;
 }
 
@@ -720,6 +749,11 @@ async function copyReport() {
 // ─── WORD DOWNLOAD ─────────────────────────────────────────────────
 async function downloadWord() {
   if (!reportMarkdown) return;
+  if (typeof docx === 'undefined') {
+    showError('Word library not loaded. Check your internet connection and refresh the page.');
+    return;
+  }
+  try {
   const {
     Document, Packer, Paragraph, TextRun, HeadingLevel,
     AlignmentType, BorderStyle, WidthType, ShadingType,
@@ -859,6 +893,10 @@ async function downloadWord() {
   const a    = document.createElement('a');
   a.href = url; a.download = 'Meeting Report - ' + topic + '.docx'; a.click();
   URL.revokeObjectURL(url);
+  } catch(err) {
+    showError('Download failed: ' + err.message);
+    console.error(err);
+  }
 }
 
 // ─── UI HELPERS ────────────────────────────────────────────────────
@@ -877,7 +915,6 @@ function clearError() {
 
 // ─── INIT ──────────────────────────────────────────────────────────
 addParticipant();
-if (!WORKER_URL) setTimeout(() => showError('No Worker URL set — click Settings to configure your Cloudflare Worker URL.'), 400);
 </script>
 </body>
 </html>
