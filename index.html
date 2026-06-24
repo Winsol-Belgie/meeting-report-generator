@@ -12,7 +12,6 @@
   <script src="https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js"></script>
 
   <style>
     /* ── App-specific additions on top of styles.css ── */
@@ -427,7 +426,7 @@
       <div class="report-toolbar-btns">
         <button class="btn-outline" onclick="copyReport()">Copy</button>
         <button class="btn-outline primary" style="background:var(--brand);border-color:var(--brand);" onclick="downloadWord()">
-          ⬇ Download .docx
+          ⬇ Download .doc
         </button>
       </div>
     </div>
@@ -745,156 +744,51 @@ async function copyReport() {
 }
 
 // ─── WORD DOWNLOAD ─────────────────────────────────────────────────
-async function downloadWord() {
+function downloadWord() {
   if (!reportMarkdown) return;
-  if (typeof docx === 'undefined') {
-    showError('Word library not loaded. Check your internet connection and refresh the page.');
-    return;
-  }
-  try {
-  const {
-    Document, Packer, Paragraph, TextRun, HeadingLevel,
-    AlignmentType, BorderStyle, WidthType, ShadingType,
-    Table, TableRow, TableCell, LevelFormat, PageNumber, Header, Footer,
-  } = docx;
+  const topic        = document.getElementById('meetingTopic').value || 'Meeting report';
+  const date         = document.getElementById('meetingDate').value || '—';
+  const duration     = document.getElementById('meetingDuration').value || '—';
+  const participants = getParticipants() || '—';
+  const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office'
+    xmlns:w='urn:schemas-microsoft-com:office:word'
+    xmlns='http://www.w3.org/TR/REC-html40'>
+  <head><meta charset='utf-8'>
+  <style>
+    body  { font-family: "Segoe UI", sans-serif; font-size: 11pt; margin: 2cm; color: #111; }
+    h1    { font-size: 14pt; font-weight: bold; border-bottom: 2pt solid #FFD500; padding-bottom: 3pt; margin-top: 18pt; }
+    h2    { font-size: 12pt; font-weight: bold; color: #333; margin-top: 14pt; }
+    p     { margin: 4pt 0 7pt; line-height: 1.5; }
+    ul    { margin: 4pt 0 7pt; padding-left: 18pt; }
+    li    { margin: 2pt 0; line-height: 1.5; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 16pt; }
+    td    { border: 1pt solid #E5E5E9; padding: 5pt 8pt; font-size: 10pt; }
+    td.lbl { font-weight: bold; background: #FFFBE6; width: 28%; }
+    .title-block { margin-bottom: 18pt; }
+    .main-title  { font-size: 22pt; font-weight: bold; margin: 0 0 4pt; }
+    .sub-title   { font-size: 14pt; color: #444; border-bottom: 2pt solid #FFD500; padding-bottom: 4pt; margin: 0 0 14pt; }
+  </style>
+  </head><body>
+  <div class="title-block">
+    <p class="main-title">MEETING REPORT</p>
+    <p class="sub-title">${topic}</p>
+    <table>
+      <tr><td class="lbl">Date</td><td>${date}</td></tr>
+      <tr><td class="lbl">Duration</td><td>${duration}</td></tr>
+      <tr><td class="lbl">Topic</td><td>${topic}</td></tr>
+      <tr><td class="lbl">Participants</td><td>${participants}</td></tr>
+    </table>
+  </div>
+  ${marked.parse(reportMarkdown)}
+  </body></html>`;
 
-  const YELLOW = 'FFD500';
-  const DARK   = '111111';
-
-  function renderInline(text) {
-    const runs = [];
-    const re = /\*\*(.+?)\*\*/g;
-    let last = 0, m;
-    while ((m = re.exec(text)) !== null) {
-      if (m.index > last) runs.push(new TextRun({ text: text.slice(last, m.index), font: 'Segoe UI', size: 22 }));
-      runs.push(new TextRun({ text: m[1], bold: true, font: 'Segoe UI', size: 22 }));
-      last = m.index + m[0].length;
-    }
-    if (last < text.length) runs.push(new TextRun({ text: text.slice(last), font: 'Segoe UI', size: 22 }));
-    return runs.length ? runs : [new TextRun({ text, font: 'Segoe UI', size: 22 })];
-  }
-
-  const children = [];
-  for (const line of reportMarkdown.split('\n')) {
-    if (line.startsWith('## ')) {
-      children.push(new Paragraph({
-        heading: HeadingLevel.HEADING_1,
-        spacing: { before: 280, after: 80 },
-        children: [new TextRun({ text: line.slice(3), bold: true, font: 'Segoe UI', size: 26, color: DARK })],
-      }));
-    } else if (line.startsWith('### ')) {
-      children.push(new Paragraph({
-        heading: HeadingLevel.HEADING_2,
-        spacing: { before: 180, after: 60 },
-        children: [new TextRun({ text: line.slice(4), bold: true, font: 'Segoe UI', size: 22, color: '333333' })],
-      }));
-    } else if (line.startsWith('- ') || line.startsWith('* ')) {
-      children.push(new Paragraph({
-        numbering: { reference: 'bullets', level: 0 },
-        spacing: { after: 60 },
-        children: renderInline(line.slice(2)),
-      }));
-    } else if (line.trim()) {
-      children.push(new Paragraph({ spacing: { after: 100 }, children: renderInline(line) }));
-    } else {
-      children.push(new Paragraph({ spacing: { after: 60 }, children: [] }));
-    }
-  }
-
-  const topic = document.getElementById('meetingTopic').value || 'Meeting report';
-  const bdr   = { style: BorderStyle.SINGLE, size: 1, color: 'E5E5E9' };
-  const allBdr = { top: bdr, bottom: bdr, left: bdr, right: bdr };
-
-  function metaRow(label, value, shade) {
-    return new TableRow({ children: [
-      new TableCell({
-        borders: allBdr,
-        width: { size: 2600, type: WidthType.DXA },
-        shading: { fill: shade ? 'FFFBE6' : 'FFFFFF', type: ShadingType.CLEAR },
-        margins: { top: 80, bottom: 80, left: 120, right: 120 },
-        children: [new Paragraph({ children: [new TextRun({ text: label, bold: true, font: 'Segoe UI', size: 20 })] })],
-      }),
-      new TableCell({
-        borders: allBdr,
-        width: { size: 6526, type: WidthType.DXA },
-        shading: { fill: 'FFFFFF', type: ShadingType.CLEAR },
-        margins: { top: 80, bottom: 80, left: 120, right: 120 },
-        children: [new Paragraph({ children: [new TextRun({ text: value, font: 'Segoe UI', size: 20 })] })],
-      }),
-    ]});
-  }
-
-  const doc = new Document({
-    numbering: { config: [{ reference: 'bullets', levels: [{
-      level: 0, format: LevelFormat.BULLET, text: '–', alignment: AlignmentType.LEFT,
-      style: { paragraph: { indent: { left: 600, hanging: 300 } } },
-    }] }] },
-    styles: {
-      default: { document: { run: { font: 'Segoe UI', size: 22 } } },
-      paragraphStyles: [
-        { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal',
-          run: { size: 26, bold: true, font: 'Segoe UI', color: DARK },
-          paragraph: {
-            spacing: { before: 280, after: 80 }, outlineLevel: 0,
-            border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: YELLOW, space: 4 } },
-          } },
-        { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal',
-          run: { size: 22, bold: true, font: 'Segoe UI', color: '333333' },
-          paragraph: { spacing: { before: 180, after: 60 }, outlineLevel: 1 } },
-      ],
-    },
-    sections: [{
-      properties: {
-        page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, right: 1134, bottom: 1134, left: 1134 } },
-      },
-      headers: { default: new Header({ children: [new Paragraph({
-        border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: YELLOW } },
-        spacing: { after: 0 },
-        children: [new TextRun({ text: 'MEETING REPORT  ·  ' + topic, font: 'Segoe UI', size: 18, bold: true })],
-      })] }) },
-      footers: { default: new Footer({ children: [new Paragraph({
-        alignment: AlignmentType.RIGHT,
-        border: { top: { style: BorderStyle.SINGLE, size: 4, color: 'CCCCCC' } },
-        children: [
-          new TextRun({ text: 'Page ', font: 'Segoe UI', size: 18, color: '888888' }),
-          new TextRun({ children: [PageNumber.CURRENT], font: 'Segoe UI', size: 18, color: '888888' }),
-        ],
-      })] }) },
-      children: [
-        new Paragraph({ spacing: { after: 40 },
-          children: [new TextRun({ text: 'MEETING REPORT', font: 'Segoe UI', size: 42, bold: true })] }),
-        new Paragraph({
-          spacing: { after: 40 },
-          border: { bottom: { style: BorderStyle.SINGLE, size: 10, color: YELLOW } },
-          children: [new TextRun({ text: topic, font: 'Segoe UI', size: 28, color: '444444' })],
-        }),
-        new Paragraph({ spacing: { after: 120 }, children: [] }),
-        new Table({
-          width: { size: 9126, type: WidthType.DXA },
-          columnWidths: [2600, 6526],
-          rows: [
-            metaRow('Date',         document.getElementById('meetingDate').value || '—',     false),
-            metaRow('Duration',     document.getElementById('meetingDuration').value || '—', true),
-            metaRow('Topic',        topic,                                                   false),
-            metaRow('Participants', getParticipants() || '—',                                true),
-          ],
-        }),
-        new Paragraph({ spacing: { after: 160 }, children: [] }),
-        ...children,
-      ],
-    }],
-  });
-
-  const buf  = await Packer.toBuffer(doc);
-  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  const blob = new Blob(['﻿', html], { type: 'application/msword' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href = url; a.download = 'Meeting Report - ' + topic + '.docx'; a.click();
+  a.href = url;
+  a.download = 'Meeting Report - ' + topic + '.doc';
+  a.click();
   URL.revokeObjectURL(url);
-  } catch(err) {
-    showError('Download failed: ' + err.message);
-    console.error(err);
-  }
 }
 
 // ─── UI HELPERS ────────────────────────────────────────────────────
