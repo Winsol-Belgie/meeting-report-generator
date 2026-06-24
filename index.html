@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meeting Report Generator</title>
+
+  <!-- Winsol SO!Crates design system -->
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Libraries -->
+  <script src="https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+  <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+
+  <style>
+    /* ── App-specific additions on top of styles.css ── */
+
+    .step-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px; height: 22px;
+      background: var(--brand);
+      border-radius: 50%;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #111;
+      flex-shrink: 0;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin: 0 0 16px;
+      color: var(--text);
+    }
+
+    /* Upload zones */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 24px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      background: #fafafa;
+    }
+    .drop-zone:hover   { border-color: var(--brand); background: #fffbe6; }
+    .drop-zone.drag-over { border-color: var(--brand); background: #fffbe6; }
+    .drop-zone svg { width: 28px; height: 28px; color: #ccc; margin: 0 auto 8px; display: block; }
+    .drop-zone p  { font-size: 0.8rem; color: var(--muted); margin: 0; }
+    .drop-zone.has-file { border-color: #22c55e; background: #f0fdf4; }
+    .drop-zone.has-file p { color: #16a34a; font-weight: 600; }
+
+    .upload-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 600px) { .upload-grid { grid-template-columns: 1fr; } }
+
+    .upload-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 6px;
+      display: block;
+    }
+    .upload-hint {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    /* File chips */
+    .file-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 0.75rem;
+      color: #15803d;
+      margin: 3px 3px 0 0;
+    }
+
+    /* Form grid */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 16px;
+    }
+    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+    .form-grid .span-2 { grid-column: 1 / -1; }
+
+    .field-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 5px;
+    }
+    .field-required { color: #e53e3e; }
+
+    .field-input {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      background: #fff;
+      color: var(--text);
+      box-sizing: border-box;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .field-input:focus {
+      outline: 2px solid var(--brand);
+      border-color: var(--brand);
+    }
+    select.field-input { appearance: none; -webkit-appearance: none; cursor: pointer; }
+
+    /* Participants */
+    .participant-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .participant-row .field-input { flex: 1; }
+    .btn-remove {
+      flex-shrink: 0;
+      width: 28px; height: 28px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      font-size: 14px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-remove:hover { border-color: #e53e3e; color: #e53e3e; background: #fff5f5; }
+
+    .btn-add {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #555;
+      background: none;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 7px 12px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-add:hover { border-color: var(--brand); color: var(--text); background: #fffbe6; }
+
+    /* Generate button */
+    .generate-wrap {
+      display: flex;
+      justify-content: center;
+      margin: 6px 0;
+    }
+    #generateBtn {
+      padding: 12px 40px;
+      font-size: 1rem;
+      font-weight: 700;
+      border-radius: 10px;
+      min-width: 200px;
+    }
+    #generateBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    /* Report output */
+    .report-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .report-toolbar-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-outline {
+      padding: 7px 14px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .btn-outline:hover { border-color: var(--brand); background: #fffbe6; }
+
+    .report-body {
+      background: #fafafa;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 22px;
+      min-height: 160px;
+      font-size: 0.88rem;
+      line-height: 1.65;
+    }
+    .report-body h2 { font-size: 1rem; font-weight: 700; margin: 1.1rem 0 0.35rem; color: #111; border-bottom: 2px solid var(--brand); padding-bottom: 3px; display: inline-block; }
+    .report-body h3 { font-size: 0.9rem; font-weight: 700; margin: 0.8rem 0 0.3rem; color: #444; }
+    .report-body p  { margin: 0.3rem 0 0.55rem; }
+    .report-body ul { list-style: disc; padding-left: 1.3rem; margin: 0.3rem 0 0.55rem; }
+    .report-body li { margin: 0.18rem 0; }
+    .report-body strong { font-weight: 700; }
+
+    /* Settings modal */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.35);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200; padding: 16px;
+    }
+    .modal-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      max-width: 420px; width: 100%;
+      box-shadow: 0 8px 32px rgba(0,0,0,.12);
+    }
+    .modal-card h2 { font-size: 1rem; font-weight: 700; margin: 0 0 4px; }
+    .modal-card p  { font-size: 0.82rem; color: var(--muted); margin: 0 0 16px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+    /* Error banner */
+    .error-banner {
+      background: #fff5f5;
+      border: 1px solid #e53e3e;
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: #c53030;
+      font-size: 0.85rem;
+    }
+
+    /* Spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { animation: spin 0.8s linear infinite; display: inline-block; }
+  </style>
+</head>
+
+<body>
+<div class="container">
+
+  <!-- ══ HERO ═══════════════════════════════════════════════════════ -->
+  <div class="hero">
+    <div>
+      <h1 class="hero__title">Meeting Report Generator</h1>
+      <div class="hero__user">
+        <button class="btn-secondary btn-logout" onclick="openSettings()">⚙ Settings</button>
+      </div>
+    </div>
+    <!-- Logo: replace src with your logo file if available -->
+    <svg class="hero__logo" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="60" cy="60" r="60" fill="#FFD500"/>
+      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
+            font-family="Georgia,serif" font-size="44" font-weight="bold" fill="#111">M</text>
+      <text x="50%" y="72%" dominant-baseline="middle" text-anchor="middle"
+            font-family="system-ui,sans-serif" font-size="13" fill="#333">Reports</text>
+    </svg>
+  </div>
+
+  <!-- ══ STEP 1: FILES ══════════════════════════════════════════════ -->
+  <div class="ts-card">
+    <h2 class="section-title">
+      <span class="step-badge">1</span>
+      Upload files
+    </h2>
+
+    <div class="upload-grid">
+
+      <!-- Transcript -->
+      <div>
+        <span class="upload-label">
+          Transcript <span class="field-required">*</span>
+          <span class="upload-hint">· .vtt &nbsp;·&nbsp; .txt &nbsp;·&nbsp; .docx</span>
+        </span>
+        <div id="transcriptZone" class="drop-zone"
+             ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"
+             ondrop="handleDrop(event,'transcript')" onclick="document.getElementById('transcriptInput').click()">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+          <p id="transcriptLabel">Drop file here or click to browse</p>
+        </div>
+        <input id="transcriptInput" type="file" accept=".vtt,.txt,.docx" style="display:none"
+               onchange="handleFileSelect(event,'transcript')" />
+      </div>
+
+      <!-- Additional docs -->
+      <div>
+        <span class="upload-label">
+          Additional documents
+          <span class="upload-hint">· meeting prep &nbsp;·&nbsp; notes &nbsp;·&nbsp; .docx &nbsp;·&nbsp; .txt</span>
+        </span>
+        <div id="docsZone" class="drop-zone"
+             ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"
+             ondrop="handleDrop(event,'docs')" onclick="document.getElementById('docsInput').click()">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                  d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
+          </svg>
+          <p>Optional — drop files here or click</p>
+        </div>
+        <input id="docsInput" type="file" accept=".docx,.txt" multiple style="display:none"
+               onchange="handleFileSelect(event,'docs')" />
+        <div id="docsList" style="margin-top:8px;"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ STEP 2: PARAMETERS ═════════════════════════════════════════ -->
+  <div class="ts-card">
+    <h2 class="section-title">
+      <span class="step-badge">2</span>
+      Meeting parameters
+    </h2>
+
+    <div class="form-grid">
+
+      <div class="span-2">
+        <label class="field-label" for="meetingType">Meeting type <span class="field-required">*</span></label>
+        <select id="meetingType" class="field-input">
+          <option value="winsol_project">Winsol project meeting</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="field-label" for="meetingDate">Date</label>
+        <input id="meetingDate" type="date" class="field-input" />
+      </div>
+
+      <div>
+        <label class="field-label" for="meetingDuration">Duration</label>
+        <input id="meetingDuration" type="text" class="field-input" placeholder="e.g. 1h 45min" />
+      </div>
+
+      <div>
+        <label class="field-label" for="transcriptLang">Transcription language</label>
+        <select id="transcriptLang" class="field-input">
+          <option value="English">English</option>
+          <option value="Dutch">Dutch (NL)</option>
+          <option value="French">French (FR)</option>
+          <option value="mixed">Mixed</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="field-label" for="reportLang">Report language</label>
+        <select id="reportLang" class="field-input">
+          <option value="English">English</option>
+          <option value="Dutch">Dutch</option>
+          <option value="French">French</option>
+        </select>
+      </div>
+
+      <div class="span-2">
+        <label class="field-label" for="meetingTopic">Topic / purpose</label>
+        <input id="meetingTopic" type="text" class="field-input"
+               placeholder="e.g. Roadmap review — SO!Mini priorities" />
+      </div>
+
+      <div class="span-2">
+        <label class="field-label" for="recordingNote">Recording note</label>
+        <input id="recordingNote" type="text" class="field-input"
+               placeholder='e.g. David online via Teams, rest on shared Jabra speaker' />
+      </div>
+
+    </div>
+
+    <!-- Participants -->
+    <div style="margin-top:16px;">
+      <label class="field-label">Participants</label>
+      <div id="participantRows" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <button class="btn-add" onclick="addParticipant()">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+        </svg>
+        Add participant
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ══ GENERATE ═══════════════════════════════════════════════════ -->
+  <div class="generate-wrap">
+    <button id="generateBtn" class="primary" onclick="generate()">
+      ⚡ Generate report
+    </button>
+  </div>
+
+  <!-- ══ ERROR ═══════════════════════════════════════════════════════ -->
+  <div id="errorBanner" class="error-banner" style="display:none;margin-bottom:14px;"></div>
+
+  <!-- ══ OUTPUT ══════════════════════════════════════════════════════ -->
+  <div id="outputSection" class="ts-card" style="display:none;">
+    <div class="report-toolbar">
+      <h2 class="section-title" style="margin:0;">
+        <span class="step-badge">✓</span>
+        Report
+      </h2>
+      <div class="report-toolbar-btns">
+        <button class="btn-outline" onclick="copyReport()">Copy</button>
+        <button class="btn-outline primary" style="background:var(--brand);border-color:var(--brand);" onclick="downloadWord()">
+          ⬇ Download .docx
+        </button>
+      </div>
+    </div>
+    <div id="reportOutput" class="report-body"></div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- ══ SETTINGS MODAL ═════════════════════════════════════════════ -->
+<div id="settingsModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card">
+    <h2>Settings</h2>
+    <p>Cloudflare Worker URL — your secure API proxy. Stored in this browser only.</p>
+    <label class="field-label" for="workerUrlInput">Worker URL</label>
+    <input id="workerUrlInput" type="url" class="field-input"
+           placeholder="https://your-worker.your-subdomain.workers.dev" />
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeSettings()">Cancel</button>
+      <button class="primary" onclick="saveSettings()" style="padding:8px 20px;">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ JAVASCRIPT ═════════════════════════════════════════════════ -->
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────
+const STORAGE_KEY = 'mrg_worker_url';
+let WORKER_URL = localStorage.getItem(STORAGE_KEY) || '';
+
+// ─── STATE ─────────────────────────────────────────────────────────
+let transcriptText = '';
+let additionalDocs  = [];
+let reportMarkdown  = '';
+
+// ─── SETTINGS ──────────────────────────────────────────────────────
+function openSettings() {
+  document.getElementById('workerUrlInput').value = WORKER_URL;
+  document.getElementById('settingsModal').style.display = 'flex';
+}
+function closeSettings() {
+  document.getElementById('settingsModal').style.display = 'none';
+}
+function saveSettings() {
+  WORKER_URL = document.getElementById('workerUrlInput').value.trim();
+  localStorage.setItem(STORAGE_KEY, WORKER_URL);
+  closeSettings();
+}
+
+// ─── PARTICIPANTS ───────────────────────────────────────────────────
+function addParticipant(name = '', role = '') {
+  const id = 'p' + Date.now();
+  const row = document.createElement('div');
+  row.className = 'participant-row';
+  row.id = id;
+  row.innerHTML = `
+    <input type="text" value="${name}" placeholder="Name" class="field-input" />
+    <input type="text" value="${role}" placeholder="Role" class="field-input" />
+    <button class="btn-remove" onclick="document.getElementById('${id}').remove()" title="Remove">✕</button>`;
+  document.getElementById('participantRows').appendChild(row);
+}
+
+function getParticipants() {
+  return [...document.querySelectorAll('#participantRows .participant-row')]
+    .map(row => {
+      const [n, r] = row.querySelectorAll('input');
+      const name = n?.value.trim(), role = r?.value.trim();
+      if (!name) return null;
+      return role ? `${name} (${role})` : name;
+    })
+    .filter(Boolean).join(', ');
+}
+
+// ─── DRAG & DROP ───────────────────────────────────────────────────
+function handleDragOver(e)  { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+function handleDrop(e, target) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  processFiles([...e.dataTransfer.files], target);
+}
+function handleFileSelect(e, target) { processFiles([...e.target.files], target); }
+function processFiles(files, target) {
+  if (target === 'transcript') { if (files[0]) readFile(files[0], target); }
+  else files.forEach(f => readFile(f, target));
+}
+
+// ─── FILE READING ──────────────────────────────────────────────────
+async function readFile(file, target) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  let text = '';
+  try {
+    if (ext === 'docx') {
+      const buf = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer: buf });
+      text = result.value;
+    } else {
+      text = await file.text();
+    }
+    if (ext === 'vtt') text = parseVTT(text);
+
+    if (target === 'transcript') {
+      transcriptText = text;
+      const zone = document.getElementById('transcriptZone');
+      zone.classList.add('has-file');
+      document.getElementById('transcriptLabel').textContent = '✓ ' + file.name;
+    } else {
+      additionalDocs.push({ name: file.name, text });
+      const chip = document.createElement('span');
+      chip.className = 'file-chip';
+      chip.textContent = '✓ ' + file.name;
+      document.getElementById('docsList').appendChild(chip);
+    }
+  } catch (err) {
+    showError('Could not read "' + file.name + '": ' + err.message);
+  }
+}
+
+// ─── VTT PARSER ────────────────────────────────────────────────────
+function parseVTT(vtt) {
+  const lines = vtt.split('\n');
+  const result = [];
+  let lastSpeaker = null, buffer = [];
+  const flush = () => {
+    if (lastSpeaker && buffer.length) result.push(lastSpeaker + ': ' + buffer.join(' '));
+    buffer = [];
+  };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line || line === 'WEBVTT' || /^\d{2}:\d{2}/.test(line)) continue;
+    const m = line.match(/^<v ([^>]+)>(.*?)(?:<\/v>)?$/);
+    if (m) {
+      if (m[1] !== lastSpeaker) { flush(); lastSpeaker = m[1]; }
+      if (m[2].trim()) buffer.push(m[2].trim());
+    } else if (lastSpeaker && line && !line.startsWith('<')) {
+      buffer.push(line);
+    }
+  }
+  flush();
+  return result.join('\n');
+}
+
+// ─── MEETING TYPE DEFINITIONS ──────────────────────────────────────
+const MEETING_TYPES = {
+  winsol_project: {
+    label: 'Winsol project meeting',
+    structure: (hasRef) => `REPORT STRUCTURE:
+Generate the report in standard markdown. Use exactly this structure:
+
+## 1. Context and project background
+A concise paragraph: project name and phase, purpose of this meeting, and relevant context drawn from the transcription${hasRef ? ' and reference documents' : ''}.
+
+## 2. Project status
+Brief overview of the current project status as discussed: what is on track, what is delayed, what is at risk. Use subheadings (###) per workstream or topic if multiple are discussed.
+
+${hasRef ? `## 3. Alignment with reference document
+### 3.1 Points confirmed by the meeting
+### 3.2 Deviations, open points or risks
+
+## 4. Key conclusions and decisions` : `## 3. Key conclusions and decisions`}
+Number each item. Start each with a **bold title**. Group related items under thematic subheadings (###) if needed.
+
+## ${hasRef ? '5' : '4'}. Actions
+Bullet list of all concrete actions and decisions.
+Format: \`- **[Action/Decision]** Description — *Owner: X, Deadline: Y*\`
+Always include owner and deadline if mentioned. If not mentioned, mark as *Owner: TBD* or *Deadline: TBD*.`,
+    guidelines: `- This is a project meeting: prioritise decisions, blockers, risks, and actions over general discussion.
+- Always extract every concrete action item, even minor ones.
+- Attribute action owners precisely — use the name from the transcription.
+- Write analytically, not descriptively: summarise what was decided or concluded, not what was said.
+- Do not add your own conclusions or interpretations beyond what is stated.
+- Hard rule: Ignore inaudible or unclear fragments — do not guess or fill in gaps.`
+  },
+};
+
+// ─── PROMPTS ───────────────────────────────────────────────────────
+function buildSystemPrompt(p) {
+  const hasRef = additionalDocs.length > 0;
+  const type   = MEETING_TYPES[p.meetingType] || MEETING_TYPES['winsol_project'];
+  return `You are an expert meeting analyst and report writer.
+
+MEETING CONTEXT:
+- Meeting type: ${type.label}
+- Date: ${p.date}
+- Duration: ${p.duration}
+- Participants: ${p.participants}
+- Topic / purpose: ${p.topic}
+- Transcription language: ${p.transcriptLang}
+- Recording note: ${p.recordingNote}
+
+${type.structure(hasRef)}
+
+GUIDELINES:
+${type.guidelines}
+- Write the report in ${p.reportLang}.`;
+}
+
+function buildUserMessage() {
+  let msg = 'TRANSCRIPTION:\n\n' + transcriptText;
+  if (additionalDocs.length) {
+    msg += '\n\n---\nREFERENCE DOCUMENTS:\n';
+    additionalDocs.forEach(d => { msg += '\n[Document: ' + d.name + ']\n' + d.text + '\n'; });
+  }
+  msg += '\n\nPlease generate the meeting report now.';
+  return msg;
+}
+
+// ─── GENERATE ──────────────────────────────────────────────────────
+async function generate() {
+  if (!transcriptText) { showError('Please upload a transcript first.'); return; }
+  if (!WORKER_URL)     { openSettings(); showError('Please set your Cloudflare Worker URL in Settings.'); return; }
+
+  const p = {
+    meetingType:    document.getElementById('meetingType').value,
+    date:           document.getElementById('meetingDate').value || 'Not specified',
+    duration:       document.getElementById('meetingDuration').value || 'Not specified',
+    participants:   getParticipants() || 'Not specified',
+    topic:          document.getElementById('meetingTopic').value || 'Not specified',
+    transcriptLang: document.getElementById('transcriptLang').value,
+    recordingNote:  document.getElementById('recordingNote').value || 'Standard recording',
+    reportLang:     document.getElementById('reportLang').value,
+  };
+
+  clearError();
+  setGenerating(true);
+
+  const out = document.getElementById('outputSection');
+  out.style.display = 'block';
+  document.getElementById('reportOutput').innerHTML =
+    '<span style="color:var(--muted);font-size:0.85rem;" class="spinner">↻</span> ' +
+    '<span style="color:var(--muted);font-size:0.85rem;"> Generating report…</span>';
+
+  reportMarkdown = '';
+
+  try {
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system:   buildSystemPrompt(p),
+        messages: [{ role: 'user', content: buildUserMessage() }],
+      }),
+    });
+
+    if (!res.ok) { const e = await res.text(); throw new Error('Worker error ' + res.status + ': ' + e); }
+
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    document.getElementById('reportOutput').innerHTML = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') break;
+        try {
+          const json  = JSON.parse(data);
+          const delta = json.delta?.text || '';
+          if (delta) {
+            reportMarkdown += delta;
+            document.getElementById('reportOutput').innerHTML = marked.parse(reportMarkdown);
+          }
+        } catch {}
+      }
+    }
+    document.getElementById('reportOutput').innerHTML = marked.parse(reportMarkdown);
+
+  } catch (err) {
+    showError(err.message);
+    document.getElementById('reportOutput').innerHTML = '';
+  } finally {
+    setGenerating(false);
+  }
+}
+
+// ─── COPY ──────────────────────────────────────────────────────────
+async function copyReport() {
+  if (!reportMarkdown) return;
+  await navigator.clipboard.writeText(reportMarkdown);
+  const btn = event.currentTarget;
+  const orig = btn.textContent;
+  btn.textContent = 'Copied!';
+  setTimeout(() => { btn.textContent = orig; }, 1500);
+}
+
+// ─── WORD DOWNLOAD ─────────────────────────────────────────────────
+async function downloadWord() {
+  if (!reportMarkdown) return;
+  const {
+    Document, Packer, Paragraph, TextRun, HeadingLevel,
+    AlignmentType, BorderStyle, WidthType, ShadingType,
+    Table, TableRow, TableCell, LevelFormat, PageNumber, Header, Footer,
+  } = docx;
+
+  const YELLOW = 'FFD500';
+  const DARK   = '111111';
+
+  function renderInline(text) {
+    const runs = [];
+    const re = /\*\*(.+?)\*\*/g;
+    let last = 0, m;
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) runs.push(new TextRun({ text: text.slice(last, m.index), font: 'Segoe UI', size: 22 }));
+      runs.push(new TextRun({ text: m[1], bold: true, font: 'Segoe UI', size: 22 }));
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) runs.push(new TextRun({ text: text.slice(last), font: 'Segoe UI', size: 22 }));
+    return runs.length ? runs : [new TextRun({ text, font: 'Segoe UI', size: 22 })];
+  }
+
+  const children = [];
+  for (const line of reportMarkdown.split('\n')) {
+    if (line.startsWith('## ')) {
+      children.push(new Paragraph({
+        heading: HeadingLevel.HEADING_1,
+        spacing: { before: 280, after: 80 },
+        children: [new TextRun({ text: line.slice(3), bold: true, font: 'Segoe UI', size: 26, color: DARK })],
+      }));
+    } else if (line.startsWith('### ')) {
+      children.push(new Paragraph({
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 180, after: 60 },
+        children: [new TextRun({ text: line.slice(4), bold: true, font: 'Segoe UI', size: 22, color: '333333' })],
+      }));
+    } else if (line.startsWith('- ') || line.startsWith('* ')) {
+      children.push(new Paragraph({
+        numbering: { reference: 'bullets', level: 0 },
+        spacing: { after: 60 },
+        children: renderInline(line.slice(2)),
+      }));
+    } else if (line.trim()) {
+      children.push(new Paragraph({ spacing: { after: 100 }, children: renderInline(line) }));
+    } else {
+      children.push(new Paragraph({ spacing: { after: 60 }, children: [] }));
+    }
+  }
+
+  const topic = document.getElementById('meetingTopic').value || 'Meeting report';
+  const bdr   = { style: BorderStyle.SINGLE, size: 1, color: 'E5E5E9' };
+  const allBdr = { top: bdr, bottom: bdr, left: bdr, right: bdr };
+
+  function metaRow(label, value, shade) {
+    return new TableRow({ children: [
+      new TableCell({
+        borders: allBdr,
+        width: { size: 2600, type: WidthType.DXA },
+        shading: { fill: shade ? 'FFFBE6' : 'FFFFFF', type: ShadingType.CLEAR },
+        margins: { top: 80, bottom: 80, left: 120, right: 120 },
+        children: [new Paragraph({ children: [new TextRun({ text: label, bold: true, font: 'Segoe UI', size: 20 })] })],
+      }),
+      new TableCell({
+        borders: allBdr,
+        width: { size: 6526, type: WidthType.DXA },
+        shading: { fill: 'FFFFFF', type: ShadingType.CLEAR },
+        margins: { top: 80, bottom: 80, left: 120, right: 120 },
+        children: [new Paragraph({ children: [new TextRun({ text: value, font: 'Segoe UI', size: 20 })] })],
+      }),
+    ]});
+  }
+
+  const doc = new Document({
+    numbering: { config: [{ reference: 'bullets', levels: [{
+      level: 0, format: LevelFormat.BULLET, text: '–', alignment: AlignmentType.LEFT,
+      style: { paragraph: { indent: { left: 600, hanging: 300 } } },
+    }] }] },
+    styles: {
+      default: { document: { run: { font: 'Segoe UI', size: 22 } } },
+      paragraphStyles: [
+        { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal',
+          run: { size: 26, bold: true, font: 'Segoe UI', color: DARK },
+          paragraph: {
+            spacing: { before: 280, after: 80 }, outlineLevel: 0,
+            border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: YELLOW, space: 4 } },
+          } },
+        { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal',
+          run: { size: 22, bold: true, font: 'Segoe UI', color: '333333' },
+          paragraph: { spacing: { before: 180, after: 60 }, outlineLevel: 1 } },
+      ],
+    },
+    sections: [{
+      properties: {
+        page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, right: 1134, bottom: 1134, left: 1134 } },
+      },
+      headers: { default: new Header({ children: [new Paragraph({
+        border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: YELLOW } },
+        spacing: { after: 0 },
+        children: [new TextRun({ text: 'MEETING REPORT  ·  ' + topic, font: 'Segoe UI', size: 18, bold: true })],
+      })] }) },
+      footers: { default: new Footer({ children: [new Paragraph({
+        alignment: AlignmentType.RIGHT,
+        border: { top: { style: BorderStyle.SINGLE, size: 4, color: 'CCCCCC' } },
+        children: [
+          new TextRun({ text: 'Page ', font: 'Segoe UI', size: 18, color: '888888' }),
+          new TextRun({ children: [PageNumber.CURRENT], font: 'Segoe UI', size: 18, color: '888888' }),
+        ],
+      })] }) },
+      children: [
+        new Paragraph({ spacing: { after: 40 },
+          children: [new TextRun({ text: 'MEETING REPORT', font: 'Segoe UI', size: 42, bold: true })] }),
+        new Paragraph({
+          spacing: { after: 40 },
+          border: { bottom: { style: BorderStyle.SINGLE, size: 10, color: YELLOW } },
+          children: [new TextRun({ text: topic, font: 'Segoe UI', size: 28, color: '444444' })],
+        }),
+        new Paragraph({ spacing: { after: 120 }, children: [] }),
+        new Table({
+          width: { size: 9126, type: WidthType.DXA },
+          columnWidths: [2600, 6526],
+          rows: [
+            metaRow('Date',         document.getElementById('meetingDate').value || '—',     false),
+            metaRow('Duration',     document.getElementById('meetingDuration').value || '—', true),
+            metaRow('Topic',        topic,                                                   false),
+            metaRow('Participants', getParticipants() || '—',                                true),
+          ],
+        }),
+        new Paragraph({ spacing: { after: 160 }, children: [] }),
+        ...children,
+      ],
+    }],
+  });
+
+  const buf  = await Packer.toBuffer(doc);
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'Meeting Report - ' + topic + '.docx'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── UI HELPERS ────────────────────────────────────────────────────
+function setGenerating(on) {
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = on;
+  btn.textContent = on ? '↻ Generating…' : '⚡ Generate report';
+}
+function showError(msg) {
+  const el = document.getElementById('errorBanner');
+  el.textContent = msg; el.style.display = 'block';
+}
+function clearError() {
+  document.getElementById('errorBanner').style.display = 'none';
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────
+addParticipant();
+if (!WORKER_URL) setTimeout(() => showError('No Worker URL set — click Settings to configure your Cloudflare Worker URL.'), 400);
+</script>
+</body>
+</html>
