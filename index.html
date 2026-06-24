@@ -755,30 +755,37 @@ function downloadWord() {
     xmlns='http://www.w3.org/TR/REC-html40'>
   <head><meta charset='utf-8'>
   <style>
-    body  { font-family: "Segoe UI", sans-serif; font-size: 11pt; margin: 2cm; color: #111; }
-    h1    { font-size: 14pt; font-weight: bold; border-bottom: 2pt solid #FFD500; padding-bottom: 3pt; margin-top: 18pt; }
-    h2    { font-size: 12pt; font-weight: bold; color: #333; margin-top: 14pt; }
-    p     { margin: 4pt 0 7pt; line-height: 1.5; }
-    ul    { margin: 4pt 0 7pt; padding-left: 18pt; }
-    li    { margin: 2pt 0; line-height: 1.5; }
-    table { border-collapse: collapse; width: 100%; margin-bottom: 16pt; }
-    td    { border: 1pt solid #E5E5E9; padding: 5pt 8pt; font-size: 10pt; }
-    td.lbl { font-weight: bold; background: #FFFBE6; width: 28%; }
-    .title-block { margin-bottom: 18pt; }
-    .main-title  { font-size: 22pt; font-weight: bold; margin: 0 0 4pt; }
-    .sub-title   { font-size: 14pt; color: #444; border-bottom: 2pt solid #FFD500; padding-bottom: 4pt; margin: 0 0 14pt; }
+    body  { font-family: "Segoe UI", sans-serif; font-size: 10.5pt; margin: 1.2cm 1.5cm; color: #111; }
+
+    /* Title block */
+    .main-title { font-size: 20pt; font-weight: 900; letter-spacing: -0.5pt; margin: 0 0 2pt; }
+    .sub-title  { font-size: 13pt; color: #444; margin: 0 0 10pt; padding-bottom: 5pt;
+                  border-bottom: 3pt solid #FFD500; display: block; }
+
+    /* Meta table */
+    table { border-collapse: collapse; width: 100%; margin-bottom: 14pt; font-size: 9.5pt; }
+    td    { border: 1pt solid #E5E5E9; padding: 4pt 8pt; vertical-align: top; }
+    td.lbl { font-weight: 700; background: #FFFBE6; width: 22%; color: #333; }
+
+    /* Headings */
+    h1 { font-size: 12pt; font-weight: 700; color: #111; margin: 14pt 0 3pt;
+         padding-bottom: 2pt; border-bottom: 2.5pt solid #FFD500; }
+    h2 { font-size: 10.5pt; font-weight: 700; color: #333; margin: 10pt 0 2pt; }
+
+    /* Body text */
+    p  { margin: 2pt 0 6pt; line-height: 1.55; }
+    ul { margin: 2pt 0 6pt; padding-left: 16pt; }
+    li { margin: 2pt 0; line-height: 1.55; }
+    strong { font-weight: 700; }
   </style>
   </head><body>
-  <div class="title-block">
-    <p class="main-title">MEETING REPORT</p>
-    <p class="sub-title">${topic}</p>
-    <table>
-      <tr><td class="lbl">Date</td><td>${date}</td></tr>
-      <tr><td class="lbl">Duration</td><td>${duration}</td></tr>
-      <tr><td class="lbl">Topic</td><td>${topic}</td></tr>
-      <tr><td class="lbl">Participants</td><td>${participants}</td></tr>
-    </table>
-  </div>
+  <p class="main-title">MEETING REPORT</p>
+  <span class="sub-title">${topic}</span>
+  <table>
+    <tr><td class="lbl">Date</td><td>${date}</td><td class="lbl">Duration</td><td>${duration}</td></tr>
+    <tr><td class="lbl">Topic</td><td colspan="3">${topic}</td></tr>
+    <tr><td class="lbl">Participants</td><td colspan="3">${participants}</td></tr>
+  </table>
   ${marked.parse(reportMarkdown)}
   </body></html>`;
 
