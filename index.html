@@ -292,10 +292,7 @@
 
       <!-- Transcript -->
       <div>
-        <span class="upload-label">
-          Transcript <span class="field-required">*</span>
-          <span class="upload-hint">· .vtt &nbsp;·&nbsp; .txt &nbsp;·&nbsp; .docx</span>
-        </span>
+        <span class="upload-label">Transcript <span class="field-required">*</span></span>
         <div id="transcriptZone" class="drop-zone"
              ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"
              ondrop="handleDrop(event,'transcript')" onclick="document.getElementById('transcriptInput').click()">
@@ -307,14 +304,12 @@
         </div>
         <input id="transcriptInput" type="file" accept=".vtt,.txt,.docx" style="display:none"
                onchange="handleFileSelect(event,'transcript')" />
+        <p style="font-size:0.72rem;color:var(--muted);margin:4px 0 0;">.vtt · .txt · .docx</p>
       </div>
 
       <!-- Additional docs -->
       <div>
-        <span class="upload-label">
-          Additional documents
-          <span class="upload-hint">· meeting prep &nbsp;·&nbsp; notes &nbsp;·&nbsp; .docx &nbsp;·&nbsp; .txt</span>
-        </span>
+        <span class="upload-label">Additional documents</span>
         <div id="docsZone" class="drop-zone"
              ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"
              ondrop="handleDrop(event,'docs')" onclick="document.getElementById('docsInput').click()">
