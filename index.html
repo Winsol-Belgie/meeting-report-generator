@@ -755,7 +755,9 @@ function downloadWord() {
     xmlns='http://www.w3.org/TR/REC-html40'>
   <head><meta charset='utf-8'>
   <style>
-    body  { font-family: "Segoe UI", sans-serif; font-size: 10.5pt; margin: 1.2cm 1.5cm; color: #111; }
+    @page WordSection1 { margin: 1.2cm 1.5cm 1.2cm 1.5cm; }
+    div.WordSection1   { page: WordSection1; }
+    body  { font-family: "Segoe UI", sans-serif; font-size: 10.5pt; margin: 0; color: #111; }
 
     /* Title block */
     .main-title { font-size: 20pt; font-weight: 900; letter-spacing: -0.5pt; margin: 0 0 2pt; }
@@ -779,6 +781,7 @@ function downloadWord() {
     strong { font-weight: 700; }
   </style>
   </head><body>
+  <div class="WordSection1">
   <p class="main-title">MEETING REPORT</p>
   <span class="sub-title">${topic}</span>
   <table>
@@ -787,7 +790,7 @@ function downloadWord() {
     <tr><td class="lbl">Participants</td><td colspan="3">${participants}</td></tr>
   </table>
   ${marked.parse(reportMarkdown)}
-  </body></html>`;
+  </div></body></html>`;
 
   const blob = new Blob(['﻿', html], { type: 'application/msword' });
   const url  = URL.createObjectURL(blob);
