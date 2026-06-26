@@ -630,7 +630,7 @@ ${type.guidelines}
 }
 
 function buildUserMessage() {
-  const MAX_CHARS = 80000; // ~20k tokens — safe limit for Anthropic API
+  const MAX_CHARS = 150000; // ~37k tokens — safe for Claude Sonnet (200k context)
   let transcript = transcriptText;
   let truncated = false;
   if (transcript.length > MAX_CHARS) {
