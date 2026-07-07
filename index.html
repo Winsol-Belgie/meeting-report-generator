@@ -370,6 +370,14 @@
       </div>
 
       <div class="span-2">
+        <label class="field-label" for="transcriptQuality">Transcription quality</label>
+        <select id="transcriptQuality" class="field-input">
+          <option value="standard">Standard</option>
+          <option value="dialect">Dialect / low quality audio</option>
+        </select>
+      </div>
+
+      <div class="span-2">
         <label class="field-label" for="meetingTopic">Topic / purpose</label>
         <input id="meetingTopic" type="text" class="field-input"
                placeholder="e.g. Roadmap review — SO!Mini priorities" />
@@ -692,6 +700,15 @@ MEETING CONTEXT:
 - Participants: ${p.participants}
 - Topic / purpose: ${p.topic}
 - Transcription language: ${p.transcriptLang}
+- Transcription quality: ${p.transcriptQuality === 'dialect' ? 'Dialect / low quality — see special instructions below' : 'Standard'}${p.transcriptQuality === 'dialect' ? `
+
+DIALECT / LOW QUALITY AUDIO INSTRUCTIONS:
+The transcript was auto-generated from a dialect or low-quality recording and likely contains errors. Apply these rules strictly:
+- Words may be phonetically misspelled: use surrounding context to infer the intended meaning. Do not report the misspelled word — report the inferred meaning.
+- Incomplete sentences, cut-off words, and filler sounds (uh, hm, da, ne, ze) are normal — ignore them.
+- Common Belgian Dutch dialect patterns: final -en dropped ('moeten' → 'moete'), 'niet' → 'nie', 'dat' → 'da', 'ik' → 'k', 'hebben' → 'hebbe', 'gaan' → 'goan'.
+- If a passage is truly unintelligible, skip it — never guess or hallucinate content.
+- Prioritise capturing decisions and actions correctly over verbatim accuracy.` : ''}
 - Recording note: ${p.recordingNote}${p.extraInstructions ? `\n- Additional instructions: ${p.extraInstructions}` : ''}
 
 ${type.structure(hasRef)}
@@ -732,7 +749,8 @@ async function generate() {
     duration:       document.getElementById('meetingDuration').value || 'Not specified',
     participants:   getParticipants() || 'Not specified',
     topic:          document.getElementById('meetingTopic').value || 'Not specified',
-    transcriptLang: document.getElementById('transcriptLang').value,
+    transcriptLang:      document.getElementById('transcriptLang').value,
+    transcriptQuality:   document.getElementById('transcriptQuality').value,
     recordingNote:      document.getElementById('recordingNote').value || 'Standard recording',
     extraInstructions:  document.getElementById('extraInstructions').value.trim(),
     reportLang:     document.getElementById('reportLang').value,
