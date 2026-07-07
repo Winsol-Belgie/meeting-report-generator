@@ -335,6 +335,8 @@
         <label class="field-label" for="meetingType">Meeting type <span class="field-required">*</span></label>
         <select id="meetingType" class="field-input">
           <option value="winsol_project">Winsol project meeting</option>
+          <option value="one_page_summary">Samenvatting (1 pagina)</option>
+          <option value="teams_meeting">Teams meeting analyse</option>
         </select>
       </div>
 
@@ -610,6 +612,68 @@ Always include owner and deadline if mentioned. If not mentioned, mark as *Owner
 - Always extract every concrete action item, even minor ones.
 - Attribute action owners precisely — use the name from the transcription.
 - Write analytically, not descriptively: summarise what was decided or concluded, not what was said.
+- Do not add your own conclusions or interpretations beyond what is stated.
+- Hard rule: Ignore inaudible or unclear fragments — do not guess or fill in gaps.`
+  },
+
+  one_page_summary: {
+    label: 'Samenvatting (1 pagina)',
+    structure: (_hasRef) => `REPORT STRUCTURE:
+Generate a compact single-page summary in standard markdown. Use exactly this structure — keep every section brief:
+
+## Onderwerp & doel
+One short paragraph: what was the meeting about and what was the intended outcome.
+
+## Besproken topics
+Bullet list of the main topics covered. Max 6 bullets, each one sentence.
+
+## Beslissingen
+Bullet list of concrete decisions taken. Label each: **[Beslissing]** + one sentence.
+
+## Openstaande vragen
+Bullet list of questions that were raised but not resolved. If none, write "Geen."
+
+## Actiepunten
+Bullet list. Format: \`- **[Actie]** Omschrijving — *Owner: X, Deadline: Y*\`
+
+IMPORTANT: The entire report must fit on one A4 page. Be ruthlessly concise. No introductory sentences, no filler. Every word must earn its place.`,
+    guidelines: `- Brevity is the top priority: aim for 350–450 words total.
+- Use simple, direct language — no corporate filler.
+- If something is not explicitly mentioned, omit it rather than guessing.
+- Hard rule: Ignore inaudible or unclear fragments — do not guess or fill in gaps.`
+  },
+
+  teams_meeting: {
+    label: 'Teams meeting analyse',
+    structure: (_hasRef) => `REPORT STRUCTURE:
+Generate an analytical Teams meeting report in standard markdown. Use exactly this structure:
+
+## 1. Onderwerp & context
+Short paragraph: what the conversation was about, the purpose, and any relevant background.
+
+## 2. Gespreksanalyse
+### 2.1 Gespreksleider
+Who led the meeting? Based on who opened topics, asked questions, and drove the agenda. Explain briefly.
+
+### 2.2 Spreektijdverdeling (%)
+Estimate the approximate share of speaking time per participant as a percentage. Present as a bullet list:
+\`- Naam: ~X%\`
+Base this on the frequency and length of contributions in the transcript. Add a one-line observation if the distribution is notably uneven.
+
+### 2.3 Standpunten per deelnemer
+For each participant who expressed a clear opinion or position, summarise their standpoint in 1–2 sentences. Group by person.
+
+## 3. Beslissingen
+Bullet list of concrete decisions. For each: **[Beslissing]** + description + *(genomen door: X)* where identifiable.
+
+## 4. Actiepunten
+Bullet list. Format: \`- **[Actie]** Omschrijving — *Owner: X, Deadline: Y*\`
+
+## 5. Sfeer & dynamiek
+One short paragraph: was the conversation collaborative or tense, did everyone participate, were there any notable dynamics?`,
+    guidelines: `- This is a 100% online Teams meeting: speaker attribution is important, use names from the transcript carefully.
+- For speaking time: estimate based on number and length of turns, not exact seconds — use "~X%" notation.
+- Be analytical: describe what happened and who drove it, not just what was said.
 - Do not add your own conclusions or interpretations beyond what is stated.
 - Hard rule: Ignore inaudible or unclear fragments — do not guess or fill in gaps.`
   },
