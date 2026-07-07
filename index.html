@@ -375,8 +375,16 @@
 
       <div class="span-2">
         <label class="field-label" for="recordingNote">Recording note</label>
-        <input id="recordingNote" type="text" class="field-input"
-               placeholder='e.g. David online via Teams, rest on shared Jabra speaker' />
+        <textarea id="recordingNote" class="field-input" rows="2"
+               placeholder="e.g. David online via Teams, rest on shared Jabra speaker"
+               style="resize:vertical;"></textarea>
+      </div>
+
+      <div class="span-2">
+        <label class="field-label" for="extraInstructions">Additional context / instructions</label>
+        <textarea id="extraInstructions" class="field-input" rows="3"
+               placeholder="e.g. Focus on action items. Ignore the first 10 minutes (technical setup). This meeting follows up on the kick-off from last week."
+               style="resize:vertical;"></textarea>
       </div>
 
     </div>
@@ -620,7 +628,7 @@ MEETING CONTEXT:
 - Participants: ${p.participants}
 - Topic / purpose: ${p.topic}
 - Transcription language: ${p.transcriptLang}
-- Recording note: ${p.recordingNote}
+- Recording note: ${p.recordingNote}${p.extraInstructions ? `\n- Additional instructions: ${p.extraInstructions}` : ''}
 
 ${type.structure(hasRef)}
 
@@ -660,7 +668,8 @@ async function generate() {
     participants:   getParticipants() || 'Not specified',
     topic:          document.getElementById('meetingTopic').value || 'Not specified',
     transcriptLang: document.getElementById('transcriptLang').value,
-    recordingNote:  document.getElementById('recordingNote').value || 'Standard recording',
+    recordingNote:      document.getElementById('recordingNote').value || 'Standard recording',
+    extraInstructions:  document.getElementById('extraInstructions').value.trim(),
     reportLang:     document.getElementById('reportLang').value,
   };
 
