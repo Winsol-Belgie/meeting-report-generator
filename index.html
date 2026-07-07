@@ -335,8 +335,8 @@
         <label class="field-label" for="meetingType">Meeting type <span class="field-required">*</span></label>
         <select id="meetingType" class="field-input">
           <option value="winsol_project">Winsol project meeting</option>
-          <option value="one_page_summary">Samenvatting (1 pagina)</option>
-          <option value="teams_meeting">Teams meeting analyse</option>
+          <option value="one_page_summary">One-page summary</option>
+          <option value="teams_meeting">Teams meeting analysis</option>
         </select>
       </div>
 
@@ -617,7 +617,7 @@ Always include owner and deadline if mentioned. If not mentioned, mark as *Owner
   },
 
   one_page_summary: {
-    label: 'Samenvatting (1 pagina)',
+    label: 'One-page summary',
     structure: (_hasRef) => `REPORT STRUCTURE:
 Generate a compact single-page summary in standard markdown. Use exactly this structure — keep every section brief:
 
@@ -644,7 +644,7 @@ IMPORTANT: The entire report must fit on one A4 page. Be ruthlessly concise. No 
   },
 
   teams_meeting: {
-    label: 'Teams meeting analyse',
+    label: 'Teams meeting analysis',
     structure: (_hasRef) => `REPORT STRUCTURE:
 Generate an analytical Teams meeting report in standard markdown. Use exactly this structure:
 
