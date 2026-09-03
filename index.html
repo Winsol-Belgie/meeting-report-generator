@@ -727,7 +727,7 @@ ${type.guidelines}
 }
 
 function buildUserMessage() {
-  const MAX_CHARS = 150000; // ~37k tokens — safe for Claude Sonnet (200k context)
+  const MAX_CHARS = 200000; // ~50k tokens — safe for Claude Sonnet (200k context)
   let transcript = transcriptText;
   let truncated = false;
   if (transcript.length > MAX_CHARS) {
