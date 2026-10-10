@@ -337,6 +337,7 @@
           <option value="winsol_project">Winsol project meeting</option>
           <option value="one_page_summary">One-page summary</option>
           <option value="teams_meeting">Teams meeting analysis</option>
+          <option value="chronological">Chronological summary</option>
         </select>
       </div>
 
@@ -690,6 +691,33 @@ One short paragraph: was the conversation collaborative or tense, did everyone p
 - For speaking time: estimate based on number and length of turns, not exact seconds — use "~X%" notation.
 - Be analytical: describe what happened and who drove it, not just what was said.
 - Do not add your own conclusions or interpretations beyond what is stated.
+- Hard rule: Ignore inaudible or unclear fragments — do not guess or fill in gaps.`
+  },
+
+  chronological: {
+    label: 'Chronological summary',
+    structure: (hasRef) => `REPORT STRUCTURE:
+Generate a chronological, readable narrative of the meeting in standard markdown. Follow the natural flow of the conversation from start to finish.
+
+${hasRef ? `IMPORTANT: Use the provided reference documents to:
+- Apply correct terminology (product names, project names, technical terms)
+- Understand the context of topics being discussed
+- Identify what each section of the conversation is about
+
+` : ''}Structure the narrative using thematic sections that follow the meeting's chronological order. Use ## headings to mark each topic or agenda point as it occurred. Within each section, write in flowing prose — not bullet points.
+
+Guidelines for each section:
+- Open with a short sentence naming the topic and who introduced it.
+- Describe what was said, discussed, and exchanged — in readable, natural language.
+- Attribute contributions to the right speaker where clearly identifiable.
+- Close the section with any conclusion, decision or follow-up that emerged from that topic.
+
+End with a brief ## Wrap-up section summarising how the meeting closed and any final remarks.`,
+    guidelines: `- This is a narrative rewrite, not a summary: preserve the chronological flow and the substance of what was said.
+- Make the transcript readable: fix run-on sentences, remove filler words, correct obvious transcription errors using context.${' '}
+- Use correct terminology from the reference documents wherever applicable — never invent terms.
+- Write in a professional but natural tone: as if a sharp colleague took detailed notes.
+- Do not compress or skip topics — every meaningful exchange should appear.
 - Hard rule: Ignore inaudible or unclear fragments — do not guess or fill in gaps.`
   },
 };
