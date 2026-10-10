@@ -338,6 +338,7 @@
           <option value="one_page_summary">One-page summary</option>
           <option value="teams_meeting">Teams meeting analysis</option>
           <option value="chronological">Chronological summary</option>
+          <option value="podcast_training">Podcast / Training</option>
         </select>
       </div>
 
@@ -775,6 +776,32 @@ End with a brief ## Wrap-up section summarising how the meeting closed and any f
 - Write in a professional but natural tone: as if a sharp colleague took detailed notes.
 - Do not compress or skip topics — every meaningful exchange should appear.
 - Hard rule: Ignore inaudible or unclear fragments — do not guess or fill in gaps.`
+  },
+
+  podcast_training: {
+    label: 'Podcast / Training',
+    structure: (hasRef) => `REPORT STRUCTURE:
+Rewrite the meeting content as an engaging, well-written narrative — structured chronologically by topic, but written as polished prose rather than a meeting transcript.
+
+${hasRef ? `IMPORTANT: Use the provided reference documents to:
+- Apply correct terminology (product names, project names, technical terms)
+- Understand the context and significance of topics being discussed
+
+` : ''}Use ## headings for each topic. Each section must:
+1. Open with a short, engaging hook — a punchy sentence that frames why this topic matters or what the core issue is. Do NOT start with "In this section" or the speaker's name.
+2. Explain the topic in full, flowing prose: what it is, why it changed, what it means in practice.
+3. Include relevant nuance, exceptions, or Q&A that came up — woven into the narrative, not listed separately.
+4. Close naturally — with a decision, a takeaway, or a forward-looking note if applicable.
+
+Do NOT use bullet points inside sections. Do NOT attribute every sentence to a speaker — write as if conveying the knowledge, not transcribing the conversation. Speaker names may appear where genuinely useful (e.g. a question from a specific person that adds context), but should not drive the structure.
+
+End with a brief ## Key Takeaways section with the 3–6 most important points from the session, written as complete sentences.`,
+    guidelines: `- Write for an engaged reader who was not in the room: give enough context that each topic is self-contained and understandable.
+- The tone is professional but human — clear, direct, and easy to follow when read aloud.
+- Preserve the full substance of each topic: do not compress or skip. A topic that took 5 minutes of discussion deserves a proper paragraph, not a single sentence.
+- Do not invent information or fill gaps — if something is unclear in the transcript, leave it out or note it is unconfirmed.
+- Use correct terminology from reference documents wherever applicable.
+- Ignore inaudible fragments and filler words entirely.`
   },
 };
 
