@@ -1048,6 +1048,7 @@ function stripMarkdown(md) {
     .replace(/`(.+?)`/g, '$1')       // inline code
     .replace(/^- /gm, '')            // bullets
     .replace(/\[.*?\]\(.*?\)/g, '')  // links
+    .replace(/^---+$/gm, '')         // horizontal rules
     .replace(/\n{3,}/g, '\n\n')      // extra blank lines
     .trim();
 }

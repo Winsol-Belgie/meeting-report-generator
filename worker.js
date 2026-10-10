@@ -57,7 +57,10 @@ export default {
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;')
-          .replace(/'/g, '&apos;');
+          .replace(/'/g, '&#39;')
+          .replace(/[\r\n]+/g, ' ')
+          .replace(/---+/g, '')
+          .trim();
         const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="nl-BE"><voice name="${azureVoice}">${safeText}</voice></speak>`;
         let azureRes;
         try {
@@ -78,7 +81,10 @@ export default {
         }
         if (!azureRes.ok) {
           const text = await azureRes.text();
-          return new Response(text, { status: azureRes.status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+          return new Response(
+            JSON.stringify({ error: `Azure ${azureRes.status}: ${text}`, ssml }),
+            { status: azureRes.status, headers: { ...CORS, 'Content-Type': 'application/json' } }
+          );
         }
         return new Response(azureRes.body, { headers: { ...CORS, 'Content-Type': 'audio/mpeg' } });
       }
