@@ -52,7 +52,13 @@ export default {
           );
         }
         const azureVoice = body.voice === 'male' ? 'nl-BE-ArnaudNeural' : 'nl-BE-DenaNeural';
-        const ssml = `<speak version='1.0' xml:lang='nl-BE'><voice name='${azureVoice}'>${body.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</voice></speak>`;
+        const safeText = body.text
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&apos;');
+        const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="nl-BE"><voice name="${azureVoice}">${safeText}</voice></speak>`;
         let azureRes;
         try {
           azureRes = await fetch('https://westeurope.tts.speech.microsoft.com/cognitiveservices/v1', {
