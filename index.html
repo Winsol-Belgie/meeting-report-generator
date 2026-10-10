@@ -420,6 +420,9 @@
     <button id="generateBtn" class="primary" onclick="generate()">
       ⚡ Generate report
     </button>
+    <button id="reportStopBtn" class="btn-outline" onclick="stopReport()" style="display:none;margin-top:8px;color:#c00;border-color:#c00;">
+      ⏹ Stop generating
+    </button>
   </div>
 
   <!-- ══ ERROR ═══════════════════════════════════════════════════════ -->
@@ -437,6 +440,9 @@
         <button class="btn-outline" onclick="copyReport()">Copy</button>
         <button id="listenBtn" class="btn-outline" onclick="generateAudio()" title="Listen to report">
           🔊 Listen
+        </button>
+        <button id="audioStopBtn" class="btn-outline" onclick="stopAudio()" style="display:none;color:#c00;border-color:#c00;">
+          ⏹ Stop
         </button>
         <button class="btn-outline primary" style="background:var(--brand);border-color:var(--brand);" onclick="downloadWord()">
           ⬇ Download .doc
@@ -891,6 +897,7 @@ async function generate() {
     '<span style="color:var(--muted);font-size:0.85rem;"> Generating report…</span>';
 
   reportMarkdown = '';
+  reportAbort = new AbortController();
 
   try {
     const res = await fetch(WORKER_URL, {
@@ -900,6 +907,7 @@ async function generate() {
         system:   buildSystemPrompt(p),
         messages: [{ role: 'user', content: buildUserMessage() }],
       }),
+      signal: reportAbort.signal,
     });
 
     if (!res.ok) { const e = await res.text(); throw new Error('Worker error ' + res.status + ': ' + e); }
@@ -932,9 +940,15 @@ async function generate() {
     document.getElementById('reportOutput').innerHTML = marked.parse(reportMarkdown);
 
   } catch (err) {
-    showError(err.message);
-    document.getElementById('reportOutput').innerHTML = '';
+    if (err.name !== 'AbortError') {
+      showError(err.message);
+      document.getElementById('reportOutput').innerHTML = '';
+    } else if (reportMarkdown) {
+      // Stopped mid-stream — render what we have
+      document.getElementById('reportOutput').innerHTML = marked.parse(reportMarkdown);
+    }
   } finally {
+    reportAbort = null;
     setGenerating(false);
   }
 }
@@ -1069,31 +1083,52 @@ function chunkText(text, maxChars = 4000) {
   return chunks;
 }
 
+let audioAbort = null;
+let reportAbort = null;
+
+function stopAudio() {
+  if (audioAbort) audioAbort.abort();
+}
+
+function stopReport() {
+  if (reportAbort) reportAbort.abort();
+}
+
 async function generateAudio() {
   if (!reportMarkdown) return;
-  const btn = document.getElementById('listenBtn');
+  const btn     = document.getElementById('listenBtn');
+  const stopBtn = document.getElementById('audioStopBtn');
   btn.textContent = '⏳ Generating…';
   btn.disabled = true;
+  stopBtn.style.display = 'inline-block';
   clearError();
+
+  audioAbort = new AbortController();
+  const signal = audioAbort.signal;
 
   const lang   = document.getElementById('reportLang').value;
   const voice  = lang === 'Dutch'
     ? document.getElementById('azureVoice').value
     : document.getElementById('ttsVoice').value;
   const plain  = stripMarkdown(reportMarkdown);
-  const chunks = chunkText(plain);
+  const isAzure = lang === 'Dutch';
+  const chunks = chunkText(plain, isAzure ? 800 : 4000);
   const TTS_URL = WORKER_URL.replace(/\/$/, '') + '/tts';
 
   try {
-    const blobs = await Promise.all(chunks.map(async (text) => {
+    const blobs = [];
+    for (const text of chunks) {
+      if (signal.aborted) break;
       const res = await fetch(TTS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, voice, lang }),
+        signal,
       });
       if (!res.ok) throw new Error('TTS error ' + res.status + ': ' + await res.text());
-      return await res.blob();
-    }));
+      blobs.push(await res.blob());
+    }
+    if (blobs.length === 0) return;
 
     const combined = new Blob(blobs, { type: 'audio/mpeg' });
     const url = URL.createObjectURL(combined);
@@ -1103,18 +1138,22 @@ async function generateAudio() {
     document.getElementById('audioPlayer').style.display = 'block';
     audio.play();
   } catch (err) {
-    showError('Audio failed: ' + err.message);
+    if (err.name !== 'AbortError') showError('Audio failed: ' + err.message);
   } finally {
     btn.textContent = '🔊 Listen';
     btn.disabled = false;
+    stopBtn.style.display = 'none';
+    audioAbort = null;
   }
 }
 
 // ─── UI HELPERS ────────────────────────────────────────────────────
 function setGenerating(on) {
-  const btn = document.getElementById('generateBtn');
+  const btn     = document.getElementById('generateBtn');
+  const stopBtn = document.getElementById('reportStopBtn');
   btn.disabled = on;
   btn.textContent = on ? '↻ Generating…' : '⚡ Generate report';
+  stopBtn.style.display = on ? 'inline-block' : 'none';
 }
 function showError(msg) {
   const el = document.getElementById('errorBanner');

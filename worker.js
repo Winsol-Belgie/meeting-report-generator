@@ -69,7 +69,7 @@ export default {
             headers: {
               'Ocp-Apim-Subscription-Key': env.AZURE_SPEECH_KEY,
               'Content-Type': 'application/ssml+xml',
-              'X-Microsoft-OutputFormat': 'audio-24khz-96kbitrate-mono-mp3',
+              'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3',
             },
             body: ssml,
           });
