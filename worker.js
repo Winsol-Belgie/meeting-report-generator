@@ -43,20 +43,54 @@ export default {
         return new Response('Missing text', { status: 400, headers: CORS });
       }
 
-      const langInstructions = {
-        'Dutch':   'Speak in Dutch. Use a natural, clear Dutch (Belgian/Flemish) accent. Read at a calm, professional pace.',
-        'French':  'Speak in French. Use a natural, clear French accent. Read at a calm, professional pace.',
-        'English': 'Speak in English. Use a clear, professional tone. Read at a calm pace.',
-        'German':  'Speak in German. Use a natural, clear German accent. Read at a calm, professional pace.',
-        'Spanish': 'Speak in Spanish. Use a natural, clear Spanish accent. Read at a calm, professional pace.',
-      };
-      const ttsInstruction = langInstructions[body.lang] || langInstructions['Dutch'];
+      // Dutch → Azure TTS (native Flemish voice)
+      if (body.lang === 'Dutch') {
+        if (!env.AZURE_SPEECH_KEY) {
+          return new Response(
+            JSON.stringify({ error: 'AZURE_SPEECH_KEY not configured in Worker secrets.' }),
+            { status: 500, headers: { ...CORS, 'Content-Type': 'application/json' } }
+          );
+        }
+        const azureVoice = body.voice === 'male' ? 'nl-BE-ArnaudNeural' : 'nl-BE-DenaNeural';
+        const ssml = `<speak version='1.0' xml:lang='nl-BE'><voice name='${azureVoice}'>${body.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</voice></speak>`;
+        let azureRes;
+        try {
+          azureRes = await fetch('https://westeurope.tts.speech.microsoft.com/cognitiveservices/v1', {
+            method: 'POST',
+            headers: {
+              'Ocp-Apim-Subscription-Key': env.AZURE_SPEECH_KEY,
+              'Content-Type': 'application/ssml+xml',
+              'X-Microsoft-OutputFormat': 'audio-24khz-96kbitrate-mono-mp3',
+            },
+            body: ssml,
+          });
+        } catch (err) {
+          return new Response(
+            JSON.stringify({ error: `Azure TTS failed: ${err.message}` }),
+            { status: 502, headers: { ...CORS, 'Content-Type': 'application/json' } }
+          );
+        }
+        if (!azureRes.ok) {
+          const text = await azureRes.text();
+          return new Response(text, { status: azureRes.status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+        }
+        return new Response(azureRes.body, { headers: { ...CORS, 'Content-Type': 'audio/mpeg' } });
+      }
+
+      // Other languages → OpenAI TTS
       if (!env.OPENAI_API_KEY) {
         return new Response(
           JSON.stringify({ error: 'OPENAI_API_KEY not configured in Worker secrets.' }),
           { status: 500, headers: { ...CORS, 'Content-Type': 'application/json' } }
         );
       }
+      const langInstructions = {
+        'French':  'Speak in French. Use a natural, clear French accent. Read at a calm, professional pace.',
+        'English': 'Speak in English. Use a clear, professional tone. Read at a calm pace.',
+        'German':  'Speak in German. Use a natural, clear German accent. Read at a calm, professional pace.',
+        'Spanish': 'Speak in Spanish. Use a natural, clear Spanish accent. Read at a calm, professional pace.',
+      };
+      const ttsInstruction = langInstructions[body.lang] || 'Speak clearly and professionally.';
 
       let ttsRes;
       try {

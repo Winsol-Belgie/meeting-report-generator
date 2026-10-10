@@ -455,6 +455,13 @@
           <option value="onyx">Onyx (man, diep)</option>
           <option value="sage">Sage (man, rustig)</option>
         </select>
+        <span id="azureVoiceWrap" style="display:none;gap:4px;align-items:center;">
+          <span style="font-size:0.78rem;color:var(--muted);">Stem (NL):</span>
+          <select id="azureVoice" class="field-input" style="width:auto;font-size:0.78rem;padding:4px 8px;">
+            <option value="female">Dena (vrouw, Vlaams)</option>
+            <option value="male">Arnaud (man, Vlaams)</option>
+          </select>
+        </span>
         <button class="btn-outline" onclick="generateAudio()" style="font-size:0.78rem;padding:5px 10px;">↺ Regenerate</button>
         <a id="audioDownload" class="btn-outline" style="font-size:0.78rem;padding:5px 10px;text-decoration:none;" download="Meeting Report.mp3">⬇ MP3</a>
       </div>
@@ -1068,8 +1075,10 @@ async function generateAudio() {
   btn.disabled = true;
   clearError();
 
-  const voice  = document.getElementById('ttsVoice').value;
   const lang   = document.getElementById('reportLang').value;
+  const voice  = lang === 'Dutch'
+    ? document.getElementById('azureVoice').value
+    : document.getElementById('ttsVoice').value;
   const plain  = stripMarkdown(reportMarkdown);
   const chunks = chunkText(plain);
   const TTS_URL = WORKER_URL.replace(/\/$/, '') + '/tts';
@@ -1116,6 +1125,13 @@ function clearError() {
 
 // ─── INIT ──────────────────────────────────────────────────────────
 addParticipant();
+
+// Show/hide correct voice selector based on report language
+document.getElementById('reportLang').addEventListener('change', function() {
+  const isDutch = this.value === 'Dutch';
+  document.getElementById('ttsVoice').closest('select').style.display = isDutch ? 'none' : '';
+  document.getElementById('azureVoiceWrap').style.display = isDutch ? 'flex' : 'none';
+});
 </script>
 </body>
 </html>
