@@ -1,0 +1,45 @@
+[
+  { "name": "Xavier Costenoble",       "role": "CEO" },
+  { "name": "Gwenn Vanthournout",      "role": "Product & Technical Excellence Director Outdoor R&D" },
+  { "name": "Peter Eeckhout",          "role": "Plant Manager Aalter" },
+  { "name": "Karolien Coussée",        "role": "Marketing Manager" },
+  { "name": "Benjamin Mathe",          "role": "Gebietsleiter West-Deutschland" },
+  { "name": "Bart Neuville",           "role": "Gebietsleiter Süd-West-Deutschland" },
+  { "name": "Christel Waerie",         "role": "HR-Manager" },
+  { "name": "David Da Silva",          "role": "Directeur Commercial France" },
+  { "name": "Denis Auvray",            "role": "Executive Director Operations" },
+  { "name": "Jurgen Himschoot",        "role": "Director Sales Domestic Markets" },
+  { "name": "Sebastiaan Costenoble",   "role": "Jobstudent" },
+  { "name": "Giulio Perissutti",       "role": "Sales Export Manager" },
+  { "name": "Sophie Verfaillie",       "role": "Chief Financial Officer" },
+  { "name": "Mathieu Van den Berghe",  "role": "ICT Director" },
+
+  { "name": "Marc Geers",              "role": "Productmanager Zonwering" },
+  { "name": "Miel De Muynck",          "role": "R&D Test en Modelbouwer" },
+  { "name": "Amber Chys",              "role": "R&D Medewerker" },
+  { "name": "Julie Maes",              "role": "R&D Medewerker" },
+  { "name": "Isabelle Lanssens",       "role": "R&D Medewerker" },
+  { "name": "Maxime De Vreese",        "role": "R&D Medewerker" },
+  { "name": "Marieke Meire",           "role": "Product Manager Vertical Shading" },
+
+  { "name": "Koenraad Erard",          "role": "Technical Customer Service Manager" },
+  { "name": "Kristof Ingels",          "role": "Productieleider Luifels & Veranda" },
+  { "name": "Stijn Boussemaere",       "role": "Supply Chain" },
+  { "name": "Yves Marysse",            "role": "Productiemanager Pergola" },
+  { "name": "Yourie Poelman",          "role": "Productie Manager Aalter" },
+
+  { "name": "Lander Stove",            "role": "Process Engineer Helios" },
+  { "name": "Simon De Baets",          "role": "Productie Helios" },
+  { "name": "Bianca Boddaert",         "role": "Quality Controle Helios" },
+  { "name": "Katrijn",                 "role": "" },
+
+  { "name": "Julie Bockstaele",        "role": "" },
+  { "name": "Filip Vangaever",         "role": "" },
+  { "name": "Vanessa Verbrugge",       "role": "" },
+
+  { "name": "Amber Tanghe",            "role": "Junior Customer Service Specialist" },
+  { "name": "Rainer Geretshauser",     "role": "Customer Service DACH & Export" },
+  { "name": "Anje Blomme",             "role": "Orderbureel Helios" },
+  { "name": "Wim Termote",             "role": "Technical Expert Outdoor" },
+  { "name": "Frank Devlamynck",        "role": "Orderverwerking / Calculator Zonwering" }
+]
