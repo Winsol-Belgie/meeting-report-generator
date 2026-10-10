@@ -433,9 +433,27 @@
       </h2>
       <div class="report-toolbar-btns">
         <button class="btn-outline" onclick="copyReport()">Copy</button>
+        <button id="listenBtn" class="btn-outline" onclick="generateAudio()" title="Listen to report">
+          🔊 Listen
+        </button>
         <button class="btn-outline primary" style="background:var(--brand);border-color:var(--brand);" onclick="downloadWord()">
           ⬇ Download .doc
         </button>
+      </div>
+    </div>
+    <div id="audioPlayer" style="display:none;margin-bottom:12px;">
+      <audio id="reportAudio" controls style="width:100%;border-radius:8px;"></audio>
+      <div style="display:flex;gap:8px;margin-top:6px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:0.78rem;color:var(--muted);">Voice:</span>
+        <select id="ttsVoice" class="field-input" style="width:auto;font-size:0.78rem;padding:4px 8px;">
+          <option value="nova">Nova (vrouw, helder)</option>
+          <option value="alloy">Alloy (neutraal)</option>
+          <option value="echo">Echo (man, zakelijk)</option>
+          <option value="onyx">Onyx (man, diep)</option>
+          <option value="shimmer">Shimmer (vrouw, warm)</option>
+        </select>
+        <button class="btn-outline" onclick="generateAudio()" style="font-size:0.78rem;padding:5px 10px;">↺ Regenerate</button>
+        <a id="audioDownload" class="btn-outline" style="font-size:0.78rem;padding:5px 10px;text-decoration:none;" download="Meeting Report.mp3">⬇ MP3</a>
       </div>
     </div>
     <div id="reportOutput" class="report-body"></div>
@@ -949,6 +967,73 @@ function downloadWord() {
   a.download = 'Meeting Report - ' + topic + '.doc';
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// ─── AUDIO / TTS ───────────────────────────────────────────────────
+function stripMarkdown(md) {
+  return md
+    .replace(/#{1,6}\s+/g, '')       // headings
+    .replace(/\*\*(.+?)\*\*/g, '$1') // bold
+    .replace(/\*(.+?)\*/g, '$1')     // italic
+    .replace(/`(.+?)`/g, '$1')       // inline code
+    .replace(/^- /gm, '')            // bullets
+    .replace(/\[.*?\]\(.*?\)/g, '')  // links
+    .replace(/\n{3,}/g, '\n\n')      // extra blank lines
+    .trim();
+}
+
+function chunkText(text, maxChars = 4000) {
+  const chunks = [];
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  let current = '';
+  for (const s of sentences) {
+    if ((current + ' ' + s).length > maxChars) {
+      if (current) chunks.push(current.trim());
+      current = s;
+    } else {
+      current += (current ? ' ' : '') + s;
+    }
+  }
+  if (current) chunks.push(current.trim());
+  return chunks;
+}
+
+async function generateAudio() {
+  if (!reportMarkdown) return;
+  const btn = document.getElementById('listenBtn');
+  btn.textContent = '⏳ Generating…';
+  btn.disabled = true;
+  clearError();
+
+  const voice  = document.getElementById('ttsVoice').value;
+  const plain  = stripMarkdown(reportMarkdown);
+  const chunks = chunkText(plain);
+  const TTS_URL = WORKER_URL.replace(/\/$/, '') + '/tts';
+
+  try {
+    const blobs = await Promise.all(chunks.map(async (text) => {
+      const res = await fetch(TTS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice }),
+      });
+      if (!res.ok) throw new Error('TTS error ' + res.status + ': ' + await res.text());
+      return await res.blob();
+    }));
+
+    const combined = new Blob(blobs, { type: 'audio/mpeg' });
+    const url = URL.createObjectURL(combined);
+    const audio = document.getElementById('reportAudio');
+    audio.src = url;
+    document.getElementById('audioDownload').href = url;
+    document.getElementById('audioPlayer').style.display = 'block';
+    audio.play();
+  } catch (err) {
+    showError('Audio failed: ' + err.message);
+  } finally {
+    btn.textContent = '🔊 Listen';
+    btn.disabled = false;
+  }
 }
 
 // ─── UI HELPERS ────────────────────────────────────────────────────
