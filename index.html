@@ -432,6 +432,7 @@
         Report
       </h2>
       <div class="report-toolbar-btns">
+        <button id="editBtn" class="btn-outline" onclick="toggleEdit()" title="Edit report">✏ Edit</button>
         <button class="btn-outline" onclick="copyReport()">Copy</button>
         <button id="listenBtn" class="btn-outline" onclick="generateAudio()" title="Listen to report">
           🔊 Listen
@@ -458,6 +459,8 @@
       </div>
     </div>
     <div id="reportOutput" class="report-body"></div>
+    <textarea id="reportEditor" style="display:none;width:100%;min-height:500px;font-family:monospace;font-size:0.85rem;padding:16px;border:2px solid var(--brand);border-radius:8px;box-sizing:border-box;resize:vertical;line-height:1.6;"></textarea>
+    <div id="editHint" style="display:none;font-size:0.78rem;color:var(--muted);margin-top:6px;">Bewerk de markdown tekst en klik <strong>Save</strong> om de preview bij te werken.</div>
   </div>
 
 </div><!-- /container -->
@@ -968,6 +971,38 @@ function downloadWord() {
   a.download = 'Meeting Report - ' + topic + '.doc';
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// ─── EDIT MODE ─────────────────────────────────────────────────────
+let editMode = false;
+function toggleEdit() {
+  const btn      = document.getElementById('editBtn');
+  const output   = document.getElementById('reportOutput');
+  const editor   = document.getElementById('reportEditor');
+  const hint     = document.getElementById('editHint');
+
+  if (!editMode) {
+    // Enter edit mode
+    editor.value = reportMarkdown;
+    output.style.display = 'none';
+    editor.style.display = 'block';
+    hint.style.display   = 'block';
+    btn.textContent      = '💾 Save';
+    btn.style.background = 'var(--brand)';
+    btn.style.borderColor= 'var(--brand)';
+    editMode = true;
+  } else {
+    // Save & exit edit mode
+    reportMarkdown = editor.value;
+    output.innerHTML     = marked.parse(reportMarkdown);
+    output.style.display = 'block';
+    editor.style.display = 'none';
+    hint.style.display   = 'none';
+    btn.textContent      = '✏ Edit';
+    btn.style.background = '';
+    btn.style.borderColor= '';
+    editMode = false;
+  }
 }
 
 // ─── AUDIO / TTS ───────────────────────────────────────────────────
