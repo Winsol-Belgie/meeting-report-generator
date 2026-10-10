@@ -42,6 +42,15 @@ export default {
       if (!body.text) {
         return new Response('Missing text', { status: 400, headers: CORS });
       }
+
+      const langInstructions = {
+        'Dutch':   'Speak in Dutch. Use a natural, clear Dutch (Belgian/Flemish) accent. Read at a calm, professional pace.',
+        'French':  'Speak in French. Use a natural, clear French accent. Read at a calm, professional pace.',
+        'English': 'Speak in English. Use a clear, professional tone. Read at a calm pace.',
+        'German':  'Speak in German. Use a natural, clear German accent. Read at a calm, professional pace.',
+        'Spanish': 'Speak in Spanish. Use a natural, clear Spanish accent. Read at a calm, professional pace.',
+      };
+      const ttsInstruction = langInstructions[body.lang] || langInstructions['Dutch'];
       if (!env.OPENAI_API_KEY) {
         return new Response(
           JSON.stringify({ error: 'OPENAI_API_KEY not configured in Worker secrets.' }),
@@ -61,7 +70,7 @@ export default {
             model: 'gpt-4o-mini-tts',
             input: body.text,
             voice: body.voice || 'nova',
-            instructions: 'Speak in Dutch. Use a natural, clear Dutch (Belgian/Flemish) accent. Read at a calm, professional pace.',
+            instructions: ttsInstruction,
             response_format: 'mp3',
           }),
         });

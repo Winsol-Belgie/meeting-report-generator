@@ -1042,6 +1042,7 @@ async function generateAudio() {
   clearError();
 
   const voice  = document.getElementById('ttsVoice').value;
+  const lang   = document.getElementById('reportLang').value;
   const plain  = stripMarkdown(reportMarkdown);
   const chunks = chunkText(plain);
   const TTS_URL = WORKER_URL.replace(/\/$/, '') + '/tts';
@@ -1051,7 +1052,7 @@ async function generateAudio() {
       const res = await fetch(TTS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voice }),
+        body: JSON.stringify({ text, voice, lang }),
       });
       if (!res.ok) throw new Error('TTS error ' + res.status + ': ' + await res.text());
       return await res.blob();
