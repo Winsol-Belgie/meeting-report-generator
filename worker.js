@@ -58,9 +58,10 @@ export default {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'tts-1',
+            model: 'gpt-4o-mini-tts',
             input: body.text,
             voice: body.voice || 'nova',
+            instructions: 'Speak in Dutch. Use a natural, clear Dutch (Belgian/Flemish) accent. Read at a calm, professional pace.',
             response_format: 'mp3',
           }),
         });
