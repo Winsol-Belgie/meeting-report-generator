@@ -272,14 +272,14 @@
     .btn-dark { background:#2f3638; color:#fff; border:none; border-radius:8px; padding:6px 14px; font-family:inherit; font-weight:700; font-size:12px; cursor:pointer; }
     .btn-dark:hover { background:#23292b; }
 
-    /* ── Login screen ─────────────────────────────────────────────── */
-    #loginScreen { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; background:var(--bg); }
+    /* ── Login screen (identiek aan Presentatievertaler) ──────────── */
+    #loginScreen { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; box-sizing:border-box; }
     .login-card { background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:32px 28px; max-width:360px; width:100%; text-align:center; box-shadow: 0 4px 24px rgba(0,0,0,.08); }
     .login-card .login-logo { width:56px; height:56px; margin-bottom:12px; }
     .login-card h1 { font-size:20px; margin:0 0 4px; color:var(--text); }
     .login-card .login-sub { color:var(--muted); font-size:13px; margin:0 0 20px; }
     .login-form { display:flex; flex-direction:column; gap:12px; text-align:left; }
-    .login-form input[type=text], .login-form input[type=password] { width:100%; box-sizing:border-box; border:1px solid var(--border); border-radius:9px; padding:10px 12px; font-family:inherit; font-size:14px; background:var(--bg); color:var(--text); }
+    .login-form input[type=text], .login-form input[type=password] { width:100%; box-sizing:border-box; border:1px solid var(--border); border-radius:9px; padding:10px 12px; font-family:inherit; font-size:14px; background:#f7f7f8; color:var(--text); }
     .login-form input:focus { outline:2px solid var(--brand); outline-offset:1px; }
     .login-pw-wrap { position:relative; }
     .login-pw-wrap input { padding-right:38px !important; }
@@ -311,7 +311,7 @@
         <input type="checkbox" id="loginRemember">
         <span data-i18n="remember">Stay signed in</span>
       </label>
-      <button class="btn" id="loginSubmitBtn" type="button" data-i18n="loginBtn">Sign in</button>
+      <button class="login-btn" id="loginSubmitBtn" type="button" data-i18n="loginBtn">Sign in</button>
       <div class="login-error" id="loginError"></div>
     </div>
     <div class="language-box login-lang">
