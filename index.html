@@ -258,6 +258,20 @@
     /* Spinner */
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner { animation: spin 0.8s linear infinite; display: inline-block; }
+
+    /* Language switcher */
+    .lang-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      color: var(--muted);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .lang-btn:hover { border-color: var(--brand); color: var(--text); }
+    .lang-btn.active { background: var(--brand); border-color: var(--brand); color: #111; font-weight: 700; }
   </style>
 </head>
 
@@ -269,6 +283,14 @@
     <div>
       <h1 class="hero__title">Meeting Report Generator</h1>
       <div class="hero__user">
+        <div id="langSwitcher" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">
+          <button class="lang-btn" data-lang="nl" onclick="setUiLang('nl')" title="Nederlands">🇧🇪 NL</button>
+          <button class="lang-btn" data-lang="fr" onclick="setUiLang('fr')" title="Français">🇫🇷 FR</button>
+          <button class="lang-btn" data-lang="en" onclick="setUiLang('en')" title="English">🇬🇧 EN</button>
+          <button class="lang-btn" data-lang="de" onclick="setUiLang('de')" title="Deutsch">🇩🇪 DE</button>
+          <button class="lang-btn" data-lang="es" onclick="setUiLang('es')" title="Español">🇪🇸 ES</button>
+          <button class="lang-btn" data-lang="it" onclick="setUiLang('it')" title="Italiano">🇮🇹 IT</button>
+        </div>
       </div>
     </div>
     <!-- Logo: replace src with your logo file if available -->
@@ -279,14 +301,14 @@
   <div class="ts-card">
     <h2 class="section-title">
       <span class="step-badge">1</span>
-      Upload files
+      <span data-i18n="uploadFiles">Upload files</span>
     </h2>
 
     <div class="upload-grid">
 
       <!-- Transcript -->
       <div>
-        <span class="upload-label">Transcript <span class="field-required">*</span></span>
+        <span class="upload-label"><span data-i18n="transcript">Transcript</span> <span class="field-required">*</span></span>
         <div id="transcriptZone" class="drop-zone"
              ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"
              ondrop="handleDrop(event,'transcript')" onclick="document.getElementById('transcriptInput').click()">
@@ -303,7 +325,7 @@
 
       <!-- Additional docs -->
       <div>
-        <span class="upload-label">Additional documents</span>
+        <span class="upload-label" data-i18n="additionalDocs">Additional documents</span>
         <div id="docsZone" class="drop-zone"
              ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"
              ondrop="handleDrop(event,'docs')" onclick="document.getElementById('docsInput').click()">
@@ -326,13 +348,13 @@
   <div class="ts-card">
     <h2 class="section-title">
       <span class="step-badge">2</span>
-      Meeting parameters
+      <span data-i18n="meetingParams">Meeting parameters</span>
     </h2>
 
     <div class="form-grid">
 
       <div class="span-2">
-        <label class="field-label" for="meetingType">Meeting type <span class="field-required">*</span></label>
+        <label class="field-label" for="meetingType"><span data-i18n="meetingType">Meeting type</span> <span class="field-required">*</span></label>
         <select id="meetingType" class="field-input">
           <option value="winsol_project">Winsol project meeting</option>
           <option value="one_page_summary">One-page summary</option>
@@ -343,17 +365,17 @@
       </div>
 
       <div>
-        <label class="field-label" for="meetingDate">Date</label>
+        <label class="field-label" for="meetingDate" data-i18n="date">Date</label>
         <input id="meetingDate" type="date" class="field-input" />
       </div>
 
       <div>
-        <label class="field-label" for="meetingDuration">Duration</label>
+        <label class="field-label" for="meetingDuration" data-i18n="duration">Duration</label>
         <input id="meetingDuration" type="text" class="field-input" placeholder="e.g. 1h 45min" />
       </div>
 
       <div>
-        <label class="field-label" for="transcriptLang">Transcription language</label>
+        <label class="field-label" for="transcriptLang" data-i18n="transcriptLang">Transcription language</label>
         <select id="transcriptLang" class="field-input">
           <option value="English">English</option>
           <option value="Dutch">Dutch (NL)</option>
@@ -363,16 +385,19 @@
       </div>
 
       <div>
-        <label class="field-label" for="reportLang">Report language</label>
+        <label class="field-label" for="reportLang" data-i18n="reportLang">Report language</label>
         <select id="reportLang" class="field-input">
           <option value="English">English</option>
           <option value="Dutch">Dutch</option>
           <option value="French">French</option>
+          <option value="German">German</option>
+          <option value="Spanish">Spanish</option>
+          <option value="Italian">Italian</option>
         </select>
       </div>
 
       <div class="span-2">
-        <label class="field-label" for="transcriptQuality">Transcription quality</label>
+        <label class="field-label" for="transcriptQuality" data-i18n="transcriptQuality">Transcription quality</label>
         <select id="transcriptQuality" class="field-input">
           <option value="standard">Standard</option>
           <option value="dialect">Dialect / low quality audio</option>
@@ -380,20 +405,20 @@
       </div>
 
       <div class="span-2">
-        <label class="field-label" for="meetingTopic">Topic / purpose</label>
+        <label class="field-label" for="meetingTopic" data-i18n="topic">Topic / purpose</label>
         <input id="meetingTopic" type="text" class="field-input"
                placeholder="e.g. Roadmap review — SO!Mini priorities" />
       </div>
 
       <div class="span-2">
-        <label class="field-label" for="recordingNote">Recording note</label>
+        <label class="field-label" for="recordingNote" data-i18n="recordingNote">Recording note</label>
         <textarea id="recordingNote" class="field-input" rows="2"
                placeholder="e.g. David online via Teams, rest on shared Jabra speaker"
                style="resize:vertical;"></textarea>
       </div>
 
       <div class="span-2">
-        <label class="field-label" for="extraInstructions">Additional context / instructions</label>
+        <label class="field-label" for="extraInstructions" data-i18n="extraInstructions">Additional context / instructions</label>
         <textarea id="extraInstructions" class="field-input" rows="3"
                placeholder="e.g. Focus on action items. Ignore the first 10 minutes (technical setup). This meeting follows up on the kick-off from last week."
                style="resize:vertical;"></textarea>
@@ -403,13 +428,13 @@
 
     <!-- Participants -->
     <div style="margin-top:16px;">
-      <label class="field-label">Participants</label>
+      <label class="field-label" data-i18n="participants">Participants</label>
       <div id="participantRows" style="display:flex;flex-direction:column;gap:8px;"></div>
       <button class="btn-add" onclick="addParticipant()">
         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
         </svg>
-        Add participant
+        <span data-i18n="addParticipant">Add participant</span>
       </button>
     </div>
 
@@ -418,10 +443,10 @@
   <!-- ══ GENERATE ═══════════════════════════════════════════════════ -->
   <div class="generate-wrap">
     <button id="generateBtn" class="primary" onclick="generate()">
-      ⚡ Generate report
+      ⚡ <span data-i18n="generateReport">Generate report</span>
     </button>
     <button id="reportStopBtn" class="btn-outline" onclick="stopReport()" style="display:none;margin-top:8px;color:#c00;border-color:#c00;">
-      ⏹ Stop generating
+      ⏹ <span data-i18n="stopGenerating">Stop generating</span>
     </button>
   </div>
 
@@ -433,10 +458,10 @@
     <div class="report-toolbar">
       <h2 class="section-title" style="margin:0;">
         <span class="step-badge">✓</span>
-        Report
+        <span data-i18n="report">Report</span>
       </h2>
       <div class="report-toolbar-btns">
-        <button id="editBtn" class="btn-outline" onclick="toggleEdit()" title="Edit report">✏ Edit</button>
+        <button id="editBtn" class="btn-outline" onclick="toggleEdit()" title="Edit report">✏ <span data-i18n="edit">Edit</span></button>
         <button class="btn-outline" onclick="copyReport()">Copy</button>
         <button id="listenBtn" class="btn-outline" onclick="generateAudio()" title="Listen to report">
           🔊 Listen
@@ -1035,7 +1060,7 @@ function toggleEdit() {
     output.style.display = 'none';
     editor.style.display = 'block';
     hint.style.display   = 'block';
-    btn.textContent      = '💾 Save';
+    btn.innerHTML        = '💾 <span data-i18n="save">' + (UI_LABELS[currentUiLang]?.save || 'Save') + '</span>';
     btn.style.background = 'var(--brand)';
     btn.style.borderColor= 'var(--brand)';
     editMode = true;
@@ -1046,7 +1071,7 @@ function toggleEdit() {
     output.style.display = 'block';
     editor.style.display = 'none';
     hint.style.display   = 'none';
-    btn.textContent      = '✏ Edit';
+    btn.innerHTML        = '✏ <span data-i18n="edit">' + (UI_LABELS[currentUiLang]?.edit || 'Edit') + '</span>';
     btn.style.background = '';
     btn.style.borderColor= '';
     editMode = false;
@@ -1227,8 +1252,171 @@ function clearError() {
   document.getElementById('errorBanner').style.display = 'none';
 }
 
+// ─── UI LANGUAGE ───────────────────────────────────────────────────
+const UI_LABELS = {
+  nl: {
+    uploadFiles: 'Bestanden uploaden', transcript: 'Transcript', additionalDocs: 'Extra documenten',
+    meetingParams: 'Meeting parameters', meetingType: 'Meeting type', date: 'Datum',
+    duration: 'Duur', transcriptLang: 'Taal transcriptie', reportLang: 'Taal rapport',
+    transcriptQuality: 'Kwaliteit transcriptie', topic: 'Onderwerp / doel',
+    recordingNote: 'Opname-notitie', extraInstructions: 'Extra context / instructies',
+    participants: 'Deelnemers', addParticipant: 'Deelnemer toevoegen',
+    generateReport: 'Rapport genereren', stopGenerating: 'Stoppen',
+    report: 'Rapport', edit: 'Bewerken',
+    dropTranscript: 'Sleep bestand hier of klik om te bladeren',
+    dropDocs: 'Optioneel — sleep bestanden hier of klik',
+    durationPlaceholder: 'bv. 1u 45min', topicPlaceholder: 'bv. Roadmap review — SO!Mini prioriteiten',
+    recordingPlaceholder: 'bv. David online via Teams, rest op gedeelde Jabra-luidspreker',
+    extraPlaceholder: 'bv. Focus op actiepunten. Negeer de eerste 10 minuten (technische setup).',
+    namePlaceholder: 'Naam', rolePlaceholder: 'Functie (optioneel)',
+    editHint: 'Bewerk de markdowntekst en klik op Opslaan om de preview bij te werken.',
+    save: 'Opslaan',
+  },
+  fr: {
+    uploadFiles: 'Télécharger des fichiers', transcript: 'Transcription', additionalDocs: 'Documents supplémentaires',
+    meetingParams: 'Paramètres de réunion', meetingType: 'Type de réunion', date: 'Date',
+    duration: 'Durée', transcriptLang: 'Langue de la transcription', reportLang: 'Langue du rapport',
+    transcriptQuality: 'Qualité de la transcription', topic: 'Sujet / objectif',
+    recordingNote: 'Note d\'enregistrement', extraInstructions: 'Contexte / instructions supplémentaires',
+    participants: 'Participants', addParticipant: 'Ajouter un participant',
+    generateReport: 'Générer le rapport', stopGenerating: 'Arrêter',
+    report: 'Rapport', edit: 'Modifier',
+    dropTranscript: 'Déposez le fichier ici ou cliquez pour parcourir',
+    dropDocs: 'Optionnel — déposez des fichiers ici ou cliquez',
+    durationPlaceholder: 'ex. 1h 45min', topicPlaceholder: 'ex. Revue de feuille de route — priorités SO!Mini',
+    recordingPlaceholder: 'ex. David en ligne via Teams, reste sur haut-parleur Jabra partagé',
+    extraPlaceholder: 'ex. Concentrez-vous sur les points d\'action. Ignorez les 10 premières minutes.',
+    namePlaceholder: 'Nom', rolePlaceholder: 'Fonction (optionnel)',
+    editHint: 'Modifiez le texte markdown et cliquez sur Enregistrer pour mettre à jour l\'aperçu.',
+    save: 'Enregistrer',
+  },
+  en: {
+    uploadFiles: 'Upload files', transcript: 'Transcript', additionalDocs: 'Additional documents',
+    meetingParams: 'Meeting parameters', meetingType: 'Meeting type', date: 'Date',
+    duration: 'Duration', transcriptLang: 'Transcription language', reportLang: 'Report language',
+    transcriptQuality: 'Transcription quality', topic: 'Topic / purpose',
+    recordingNote: 'Recording note', extraInstructions: 'Additional context / instructions',
+    participants: 'Participants', addParticipant: 'Add participant',
+    generateReport: 'Generate report', stopGenerating: 'Stop generating',
+    report: 'Report', edit: 'Edit',
+    dropTranscript: 'Drop file here or click to browse',
+    dropDocs: 'Optional — drop files here or click',
+    durationPlaceholder: 'e.g. 1h 45min', topicPlaceholder: 'e.g. Roadmap review — SO!Mini priorities',
+    recordingPlaceholder: 'e.g. David online via Teams, rest on shared Jabra speaker',
+    extraPlaceholder: 'e.g. Focus on action items. Ignore the first 10 minutes (technical setup).',
+    namePlaceholder: 'Name', rolePlaceholder: 'Role (optional)',
+    editHint: 'Edit the markdown text and click Save to update the preview.',
+    save: 'Save',
+  },
+  de: {
+    uploadFiles: 'Dateien hochladen', transcript: 'Transkript', additionalDocs: 'Zusätzliche Dokumente',
+    meetingParams: 'Meeting-Parameter', meetingType: 'Meeting-Typ', date: 'Datum',
+    duration: 'Dauer', transcriptLang: 'Transkriptionssprache', reportLang: 'Berichtssprache',
+    transcriptQuality: 'Transkriptionsqualität', topic: 'Thema / Zweck',
+    recordingNote: 'Aufnahmehinweis', extraInstructions: 'Zusätzlicher Kontext / Anweisungen',
+    participants: 'Teilnehmer', addParticipant: 'Teilnehmer hinzufügen',
+    generateReport: 'Bericht erstellen', stopGenerating: 'Stoppen',
+    report: 'Bericht', edit: 'Bearbeiten',
+    dropTranscript: 'Datei hier ablegen oder klicken zum Durchsuchen',
+    dropDocs: 'Optional — Dateien hier ablegen oder klicken',
+    durationPlaceholder: 'z.B. 1h 45min', topicPlaceholder: 'z.B. Roadmap-Review — SO!Mini Prioritäten',
+    recordingPlaceholder: 'z.B. David online via Teams, Rest am gemeinsamen Jabra-Lautsprecher',
+    extraPlaceholder: 'z.B. Fokus auf Aktionspunkte. Die ersten 10 Minuten ignorieren.',
+    namePlaceholder: 'Name', rolePlaceholder: 'Funktion (optional)',
+    editHint: 'Bearbeiten Sie den Markdown-Text und klicken Sie auf Speichern, um die Vorschau zu aktualisieren.',
+    save: 'Speichern',
+  },
+  es: {
+    uploadFiles: 'Subir archivos', transcript: 'Transcripción', additionalDocs: 'Documentos adicionales',
+    meetingParams: 'Parámetros de reunión', meetingType: 'Tipo de reunión', date: 'Fecha',
+    duration: 'Duración', transcriptLang: 'Idioma de transcripción', reportLang: 'Idioma del informe',
+    transcriptQuality: 'Calidad de transcripción', topic: 'Tema / propósito',
+    recordingNote: 'Nota de grabación', extraInstructions: 'Contexto / instrucciones adicionales',
+    participants: 'Participantes', addParticipant: 'Añadir participante',
+    generateReport: 'Generar informe', stopGenerating: 'Detener',
+    report: 'Informe', edit: 'Editar',
+    dropTranscript: 'Suelte el archivo aquí o haga clic para explorar',
+    dropDocs: 'Opcional — suelte archivos aquí o haga clic',
+    durationPlaceholder: 'ej. 1h 45min', topicPlaceholder: 'ej. Revisión de hoja de ruta — prioridades SO!Mini',
+    recordingPlaceholder: 'ej. David en línea via Teams, resto en altavoz Jabra compartido',
+    extraPlaceholder: 'ej. Céntrese en los puntos de acción. Ignore los primeros 10 minutos.',
+    namePlaceholder: 'Nombre', rolePlaceholder: 'Cargo (opcional)',
+    editHint: 'Edite el texto markdown y haga clic en Guardar para actualizar la vista previa.',
+    save: 'Guardar',
+  },
+  it: {
+    uploadFiles: 'Carica file', transcript: 'Trascrizione', additionalDocs: 'Documenti aggiuntivi',
+    meetingParams: 'Parametri riunione', meetingType: 'Tipo di riunione', date: 'Data',
+    duration: 'Durata', transcriptLang: 'Lingua trascrizione', reportLang: 'Lingua del rapporto',
+    transcriptQuality: 'Qualità trascrizione', topic: 'Argomento / scopo',
+    recordingNote: 'Nota di registrazione', extraInstructions: 'Contesto / istruzioni aggiuntivi',
+    participants: 'Partecipanti', addParticipant: 'Aggiungi partecipante',
+    generateReport: 'Genera rapporto', stopGenerating: 'Ferma',
+    report: 'Rapporto', edit: 'Modifica',
+    dropTranscript: 'Trascina il file qui o clicca per sfogliare',
+    dropDocs: 'Opzionale — trascina file qui o clicca',
+    durationPlaceholder: 'es. 1h 45min', topicPlaceholder: 'es. Revisione roadmap — priorità SO!Mini',
+    recordingPlaceholder: 'es. David online via Teams, resto su altoparlante Jabra condiviso',
+    extraPlaceholder: 'es. Concentrarsi sui punti di azione. Ignorare i primi 10 minuti.',
+    namePlaceholder: 'Nome', rolePlaceholder: 'Ruolo (opzionale)',
+    editHint: 'Modifica il testo markdown e clicca su Salva per aggiornare l\'anteprima.',
+    save: 'Salva',
+  },
+};
+
+let currentUiLang = 'en';
+
+function setUiLang(lang) {
+  const lc = (navigator.language || 'en').slice(0, 2);
+  const resolved = lang || (UI_LABELS[lc] ? lc : 'en');
+  currentUiLang = resolved;
+  const t = UI_LABELS[resolved] || UI_LABELS.en;
+
+  // Update all data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (t[key]) el.textContent = t[key];
+  });
+
+  // Update placeholders
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.placeholder = val; };
+  set('meetingDuration', t.durationPlaceholder);
+  set('meetingTopic', t.topicPlaceholder);
+  set('recordingNote', t.recordingPlaceholder);
+  set('extraInstructions', t.extraPlaceholder);
+
+  // Update drop zone labels
+  const tl = document.getElementById('transcriptLabel');
+  if (tl) tl.textContent = t.dropTranscript;
+
+  // Update editHint and save button
+  const hint = document.getElementById('editHint');
+  if (hint) hint.textContent = t.editHint;
+  const editBtn = document.getElementById('editBtn');
+  if (editBtn && !editMode) { const sp = editBtn.querySelector('[data-i18n="edit"]'); if (sp) sp.textContent = t.edit; }
+
+  // Update active button
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === resolved);
+  });
+
+  // Store preference
+  try { localStorage.setItem('uiLang', resolved); } catch(e) {}
+}
+
 // ─── INIT ──────────────────────────────────────────────────────────
 addParticipant();
+
+// Apply UI language (auto-detect or stored preference)
+(function() {
+  let lang = 'en';
+  try { lang = localStorage.getItem('uiLang') || ''; } catch(e) {}
+  if (!lang) {
+    const lc = (navigator.language || 'en').slice(0, 2);
+    lang = UI_LABELS[lc] ? lc : 'en';
+  }
+  setUiLang(lang);
+})();
 
 // Show/hide correct voice selector based on report language
 document.getElementById('reportLang').addEventListener('change', function() {

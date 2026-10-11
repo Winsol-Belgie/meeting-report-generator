@@ -102,6 +102,7 @@ export default {
         'English': 'Speak in English. Use a clear, professional tone. Read at a calm pace.',
         'German':  'Speak in German. Use a natural, clear German accent. Read at a calm, professional pace.',
         'Spanish': 'Speak in Spanish. Use a natural, clear Spanish accent. Read at a calm, professional pace.',
+        'Italian': 'Speak in Italian. Use a natural, clear Italian accent. Read at a calm, professional pace.',
       };
       const ttsInstruction = langInstructions[body.lang] || 'Speak clearly and professionally.';
 
