@@ -259,19 +259,17 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner { animation: spin 0.8s linear infinite; display: inline-block; }
 
-    /* Language switcher */
-    .lang-btn {
-      background: transparent;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 3px 8px;
-      font-size: 0.75rem;
-      cursor: pointer;
-      color: var(--muted);
-      transition: background 0.15s, border-color 0.15s, color 0.15s;
-    }
-    .lang-btn:hover { border-color: var(--brand); color: var(--text); }
-    .lang-btn.active { background: var(--brand); border-color: var(--brand); color: #111; font-weight: 700; }
+    /* Language select (zoals Winsol-Socrates / Presentatievertaler) */
+    .language-box { display:flex; align-items:center; gap:8px; }
+    .lang-icon { width:20px; height:20px; fill:var(--muted); flex-shrink:0; }
+    .language-wrapper { position:relative; display:inline-block; }
+    .language-wrapper select { appearance:none; -webkit-appearance:none; font-family:inherit; font-size:13px; padding:6px 32px 6px 12px; border:1px solid var(--border); border-radius:8px; background:#fff; color:var(--text); height:32px; cursor:pointer; }
+    .language-wrapper select:hover { border-color:var(--muted); }
+    .language-wrapper select:focus { outline:2px solid var(--brand); outline-offset:1px; }
+    .language-wrapper::after { content:""; position:absolute; right:12px; top:50%; transform:translateY(-50%); pointer-events:none; border-left:5px solid transparent; border-right:5px solid transparent; border-top:6px solid var(--muted); }
+    .login-lang { justify-content:center; margin-top:18px; }
+    .btn-dark { background:#2f3638; color:#fff; border:none; border-radius:8px; padding:6px 14px; font-family:inherit; font-weight:700; font-size:12px; cursor:pointer; }
+    .btn-dark:hover { background:#23292b; }
 
     /* ── Login screen ─────────────────────────────────────────────── */
     #loginScreen { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; background:var(--bg); }
@@ -290,9 +288,9 @@
     .login-btn { width:100%; }
     .login-error { color:#c00; font-size:13px; min-height:16px; }
     #appRoot { display:none; }
-    .topbar { display:flex; justify-content:flex-end; align-items:center; gap:12px; padding:8px 0 0; font-size:13px; color:var(--muted); }
+    .topbar { display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:10px; max-width:980px; margin:0 auto; padding:16px 20px 0; font-size:13px; color:var(--muted); }
+    .topbar .language-box { margin-right:auto; }
     .topbar b { color:var(--text); }
-    .topbar .btn-outline { padding:5px 12px; font-size:12px; }
   </style>
 </head>
 
@@ -301,26 +299,34 @@
   <div class="login-card">
     <img src="Winsol_Avatar_150px.png" class="login-logo" alt="Winsol" onerror="this.style.display='none'">
     <h1>Meeting Report Generator</h1>
-    <p class="login-sub">Log in to continue / Aanmelden om verder te gaan</p>
+    <p class="login-sub" data-i18n="loginSub">Log in to continue.</p>
     <div class="login-form">
-      <input type="text" id="loginUsername" placeholder="Username / Gebruikersnaam" autocomplete="username">
+      <input type="text" id="loginUsername" data-i18n-placeholder="username" placeholder="Username" autocomplete="username">
       <div class="login-pw-wrap">
-        <input type="password" id="loginPassword" placeholder="Password / Wachtwoord" autocomplete="current-password">
-        <button type="button" id="loginPwToggle" class="login-pw-eye" title="Show/hide password">👁</button>
+        <input type="password" id="loginPassword" data-i18n-placeholder="password" placeholder="Password" autocomplete="current-password">
+        <button type="button" id="loginPwToggle" class="login-pw-eye" data-i18n-title="pwToggle" title="Show/hide password">👁</button>
       </div>
       <label class="login-remember">
         <input type="checkbox" id="loginRemember">
-        <span>Stay signed in / Aangemeld blijven</span>
+        <span data-i18n="remember">Stay signed in</span>
       </label>
-      <button class="btn" id="loginSubmitBtn" type="button">Sign in / Aanmelden</button>
+      <button class="btn" id="loginSubmitBtn" type="button" data-i18n="loginBtn">Sign in</button>
       <div class="login-error" id="loginError"></div>
+    </div>
+    <div class="language-box login-lang">
+      <svg class="lang-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm7.93 9h-3.05a15.1 15.1 0 00-1.12-5.18 8.03 8.03 0 014.17 5.18zM12 4c.88 1.14 1.57 2.71 1.97 4.5H10.03C10.43 6.71 11.12 5.14 12 4zm-3.76.82A15.1 15.1 0 006.12 11H3.07a8.03 8.03 0 015.17-6.18zM3.07 13h3.05a15.1 15.1 0 001.12 5.18A8.03 8.03 0 013.07 13zm8.93 7c-.88-1.14-1.57-2.71-1.97-4.5h3.94c-.4 1.79-1.09 3.36-1.97 4.5zm3.76-.82a15.1 15.1 0 001.12-5.18h3.05a8.03 8.03 0 01-4.17 5.18z"/></svg>
+      <div class="language-wrapper"><select id="uiLangLogin" class="ui-lang"></select></div>
     </div>
   </div>
 </div>
 <div id="appRoot">
   <div class="topbar">
-    <span>Signed in as <b id="topbarUser"></b></span>
-    <button class="btn-outline" id="logoutBtn" type="button">Sign out / Afmelden</button>
+    <div class="language-box">
+      <svg class="lang-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm7.93 9h-3.05a15.1 15.1 0 00-1.12-5.18 8.03 8.03 0 014.17 5.18zM12 4c.88 1.14 1.57 2.71 1.97 4.5H10.03C10.43 6.71 11.12 5.14 12 4zm-3.76.82A15.1 15.1 0 006.12 11H3.07a8.03 8.03 0 015.17-6.18zM3.07 13h3.05a15.1 15.1 0 001.12 5.18A8.03 8.03 0 013.07 13zm8.93 7c-.88-1.14-1.57-2.71-1.97-4.5h3.94c-.4 1.79-1.09 3.36-1.97 4.5zm3.76-.82a15.1 15.1 0 001.12-5.18h3.05a8.03 8.03 0 01-4.17 5.18z"/></svg>
+      <div class="language-wrapper"><select id="uiLangApp" class="ui-lang"></select></div>
+    </div>
+    <span><span data-i18n="loggedInAs">Signed in as</span> <b id="topbarUser"></b> (<span id="topbarRole"></span>)</span>
+    <button class="btn-dark" id="logoutBtn" type="button" data-i18n="logout">Sign out</button>
   </div>
 <div class="container">
 
@@ -328,16 +334,6 @@
   <div class="hero">
     <div>
       <h1 class="hero__title">Meeting Report Generator</h1>
-      <div class="hero__user">
-        <div id="langSwitcher" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">
-          <button class="lang-btn" data-lang="nl" onclick="setUiLang('nl')" title="Nederlands">🇧🇪 NL</button>
-          <button class="lang-btn" data-lang="fr" onclick="setUiLang('fr')" title="Français">🇫🇷 FR</button>
-          <button class="lang-btn" data-lang="en" onclick="setUiLang('en')" title="English">🇬🇧 EN</button>
-          <button class="lang-btn" data-lang="de" onclick="setUiLang('de')" title="Deutsch">🇩🇪 DE</button>
-          <button class="lang-btn" data-lang="es" onclick="setUiLang('es')" title="Español">🇪🇸 ES</button>
-          <button class="lang-btn" data-lang="it" onclick="setUiLang('it')" title="Italiano">🇮🇹 IT</button>
-        </div>
-      </div>
     </div>
     <!-- Logo: replace src with your logo file if available -->
     <img src="Winsol_Avatar_150px.png" class="hero__logo" alt="Winsol" />
@@ -1411,13 +1407,50 @@ const UI_LABELS = {
   },
 };
 
-let currentUiLang = 'en';
+// Login / topbar strings (merged into UI_LABELS)
+const AUTH_LABELS = {
+  nl: { loginSub:'Log in om verder te gaan.', username:'Gebruikersnaam', password:'Wachtwoord', pwToggle:'Wachtwoord tonen/verbergen', remember:'Blijf aangemeld', loginBtn:'Aanmelden', loggingIn:'Aanmelden…', loginMissing:'Vul gebruikersnaam en wachtwoord in.', loginFailed:'Onbekende gebruikersnaam of fout wachtwoord.', loginGenericFail:'Aanmelden mislukt.', noConnection:'Kon niet verbinden met de server.', sessionExpired:'Sessie verlopen — log opnieuw in.', loggedInAs:'Ingelogd als', logout:'Uitloggen', roleAdmin:'admin', roleUser:'gebruiker', uiLanguage:'Taal van de app', auto:'Automatisch' },
+  fr: { loginSub:'Connectez-vous pour continuer.', username:"Nom d'utilisateur", password:'Mot de passe', pwToggle:'Afficher/masquer le mot de passe', remember:'Rester connecté', loginBtn:'Se connecter', loggingIn:'Connexion…', loginMissing:"Saisissez votre nom d'utilisateur et votre mot de passe.", loginFailed:"Nom d'utilisateur inconnu ou mot de passe incorrect.", loginGenericFail:'La connexion a échoué.', noConnection:'Impossible de joindre le serveur.', sessionExpired:'Session expirée — reconnectez-vous.', loggedInAs:'Connecté en tant que', logout:'Se déconnecter', roleAdmin:'admin', roleUser:'utilisateur', uiLanguage:"Langue de l'application", auto:'Automatique' },
+  en: { loginSub:'Log in to continue.', username:'Username', password:'Password', pwToggle:'Show/hide password', remember:'Stay signed in', loginBtn:'Sign in', loggingIn:'Signing in…', loginMissing:'Enter your username and password.', loginFailed:'Unknown username or wrong password.', loginGenericFail:'Sign-in failed.', noConnection:'Could not connect to the server.', sessionExpired:'Session expired — please sign in again.', loggedInAs:'Signed in as', logout:'Sign out', roleAdmin:'admin', roleUser:'user', uiLanguage:'App language', auto:'Automatic' },
+  de: { loginSub:'Melden Sie sich an, um fortzufahren.', username:'Benutzername', password:'Passwort', pwToggle:'Passwort anzeigen/verbergen', remember:'Angemeldet bleiben', loginBtn:'Anmelden', loggingIn:'Anmeldung…', loginMissing:'Bitte Benutzername und Passwort eingeben.', loginFailed:'Unbekannter Benutzername oder falsches Passwort.', loginGenericFail:'Anmeldung fehlgeschlagen.', noConnection:'Keine Verbindung zum Server.', sessionExpired:'Sitzung abgelaufen — bitte erneut anmelden.', loggedInAs:'Angemeldet als', logout:'Abmelden', roleAdmin:'Admin', roleUser:'Benutzer', uiLanguage:'Sprache der App', auto:'Automatisch' },
+  es: { loginSub:'Inicia sesión para continuar.', username:'Usuario', password:'Contraseña', pwToggle:'Mostrar/ocultar contraseña', remember:'Mantener la sesión iniciada', loginBtn:'Iniciar sesión', loggingIn:'Iniciando sesión…', loginMissing:'Introduce tu usuario y contraseña.', loginFailed:'Usuario desconocido o contraseña incorrecta.', loginGenericFail:'No se pudo iniciar sesión.', noConnection:'No se pudo conectar con el servidor.', sessionExpired:'Sesión caducada — vuelve a iniciar sesión.', loggedInAs:'Sesión iniciada como', logout:'Cerrar sesión', roleAdmin:'admin', roleUser:'usuario', uiLanguage:'Idioma de la aplicación', auto:'Automático' },
+  it: { loginSub:'Accedi per continuare.', username:'Nome utente', password:'Password', pwToggle:'Mostra/nascondi password', remember:'Rimani connesso', loginBtn:'Accedi', loggingIn:'Accesso in corso…', loginMissing:'Inserisci nome utente e password.', loginFailed:'Nome utente sconosciuto o password errata.', loginGenericFail:'Accesso non riuscito.', noConnection:'Impossibile connettersi al server.', sessionExpired:'Sessione scaduta — accedi di nuovo.', loggedInAs:'Connesso come', logout:'Esci', roleAdmin:'admin', roleUser:'utente', uiLanguage:"Lingua dell'app", auto:'Automatico' },
+};
+for (const k of Object.keys(AUTH_LABELS)) Object.assign(UI_LABELS[k], AUTH_LABELS[k]);
 
-function setUiLang(lang) {
-  const lc = (navigator.language || 'en').slice(0, 2);
-  const resolved = lang || (UI_LABELS[lc] ? lc : 'en');
+const UI_LANG_NAMES = { nl:'Nederlands', fr:'Français', en:'English', de:'Deutsch', es:'Español', it:'Italiano' };
+let currentUiLang = 'en';
+let currentRole = '';
+const tr = (key) => (UI_LABELS[currentUiLang] || UI_LABELS.en)[key] || UI_LABELS.en[key] || key;
+
+function uiLangSetting() {
+  try { const v = localStorage.getItem('uiLang'); return (v === 'auto' || UI_LABELS[v]) ? v : 'auto'; } catch(e) { return 'auto'; }
+}
+function detectBrowserLang() {
+  const list = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'en'];
+  for (const l of list) { const c = String(l).slice(0, 2).toLowerCase(); if (UI_LABELS[c]) return c; }
+  return 'en';
+}
+function fillUiLangSelect(sel) {
+  sel.innerHTML = '';
+  sel.add(new Option(tr('auto'), 'auto'));
+  for (const [c, n] of Object.entries(UI_LANG_NAMES)) sel.add(new Option(n, c));
+  sel.value = uiLangSetting();
+}
+
+function setUiLang(setting) {
+  try { localStorage.setItem('uiLang', setting || 'auto'); } catch(e) {}
+  const resolved = (!setting || setting === 'auto') ? detectBrowserLang() : setting;
   currentUiLang = resolved;
   const t = UI_LABELS[resolved] || UI_LABELS.en;
+  document.documentElement.lang = resolved;
+
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t[el.dataset.i18nPlaceholder] || el.placeholder; });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t[el.dataset.i18nTitle] || el.title; });
+  document.getElementById('loginSubmitBtn').textContent = t.loginBtn;
+  fillUiLangSelect(document.getElementById('uiLangLogin'));
+  fillUiLangSelect(document.getElementById('uiLangApp'));
+  if (currentRole) document.getElementById('topbarRole').textContent = currentRole === 'admin' ? t.roleAdmin : t.roleUser;
 
   // Update all data-i18n elements
   document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -1442,13 +1475,10 @@ function setUiLang(lang) {
   const editBtn = document.getElementById('editBtn');
   if (editBtn && !editMode) { const sp = editBtn.querySelector('[data-i18n="edit"]'); if (sp) sp.textContent = t.edit; }
 
-  // Update active button
-  document.querySelectorAll('.lang-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.lang === resolved);
-  });
+}
 
-  // Store preference
-  try { localStorage.setItem('uiLang', resolved); } catch(e) {}
+for (const id of ['uiLangLogin', 'uiLangApp']) {
+  document.getElementById(id).addEventListener('change', e => setUiLang(e.target.value));
 }
 
 // ─── AUTH ──────────────────────────────────────────────────────────
@@ -1459,13 +1489,16 @@ function authHeaders() {
   return _authToken ? { 'X-Auth-Token': _authToken } : {};
 }
 
-function showApp(username) {
+function showApp(username, role) {
+  currentRole = role || 'user';
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appRoot').style.display = 'block';
   document.getElementById('topbarUser').textContent = username;
+  document.getElementById('topbarRole').textContent = currentRole === 'admin' ? tr('roleAdmin') : tr('roleUser');
 }
 
 function showLogin(message) {
+  currentRole = '';
   _authToken = '';
   try { localStorage.removeItem(AUTH_TOKEN_KEY); sessionStorage.removeItem(AUTH_TOKEN_KEY); } catch(e) {}
   document.getElementById('appRoot').style.display = 'none';
@@ -1481,9 +1514,9 @@ async function doLogin() {
   const errorEl   = document.getElementById('loginError');
   const submitBtn = document.getElementById('loginSubmitBtn');
   errorEl.textContent = '';
-  if (!username || !password) { errorEl.textContent = 'Enter username and password.'; return; }
+  if (!username || !password) { errorEl.textContent = tr('loginMissing'); return; }
   submitBtn.disabled = true;
-  submitBtn.textContent = 'Signing in…';
+  submitBtn.textContent = tr('loggingIn');
   try {
     const res = await fetch(WORKER_URL, {
       method: 'POST',
@@ -1491,15 +1524,15 @@ async function doLogin() {
       body: JSON.stringify({ mode: 'login', username, password, remember }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) { errorEl.textContent = data.error || 'Sign-in failed.'; return; }
+    if (!res.ok) { errorEl.textContent = res.status === 401 ? tr('loginFailed') : (data.error || tr('loginGenericFail')); return; }
     _authToken = data.token;
     try { (remember ? localStorage : sessionStorage).setItem(AUTH_TOKEN_KEY, _authToken); } catch(e) {}
-    showApp(data.username);
+    showApp(data.username, data.role);
   } catch(e) {
-    errorEl.textContent = 'Could not connect to server.';
+    errorEl.textContent = tr('noConnection');
   } finally {
     submitBtn.disabled = false;
-    submitBtn.textContent = 'Sign in / Aanmelden';
+    submitBtn.textContent = tr('loginBtn');
   }
 }
 
@@ -1514,7 +1547,7 @@ async function tryRestoreSession() {
       headers: { 'Content-Type': 'application/json', 'X-Auth-Token': token },
       body: JSON.stringify({ mode: 'auth_me' }),
     });
-    if (res.ok) { const d = await res.json(); showApp(d.username); }
+    if (res.ok) { const d = await res.json(); showApp(d.username, d.role); }
     else showLogin();
   } catch(e) { showLogin(); }
 }
@@ -1535,15 +1568,7 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 addParticipant();
 
 // Apply UI language (auto-detect or stored preference)
-(function() {
-  let lang = 'en';
-  try { lang = localStorage.getItem('uiLang') || ''; } catch(e) {}
-  if (!lang) {
-    const lc = (navigator.language || 'en').slice(0, 2);
-    lang = UI_LABELS[lc] ? lc : 'en';
-  }
-  setUiLang(lang);
-})();
+setUiLang(uiLangSetting());
 
 tryRestoreSession();
 
