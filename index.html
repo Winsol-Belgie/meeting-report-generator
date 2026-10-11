@@ -12,6 +12,7 @@
   <script src="https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <style>
     /* ── App-specific additions on top of styles.css ── */
@@ -542,6 +543,21 @@
     <div id="reportOutput" class="report-body"></div>
     <textarea id="reportEditor" style="display:none;width:100%;min-height:500px;font-family:monospace;font-size:0.85rem;padding:16px;border:2px solid var(--brand);border-radius:8px;box-sizing:border-box;resize:vertical;line-height:1.6;"></textarea>
     <div id="editHint" style="display:none;font-size:0.78rem;color:var(--muted);margin-top:6px;">Bewerk de markdown tekst en klik <strong>Save</strong> om de preview bij te werken.</div>
+  </div>
+
+  <!-- ══ USER MANAGEMENT (admin only) ═══════════════════════════════ -->
+  <div id="usersCard" class="ts-card" style="display:none;">
+    <h2 class="section-title" style="margin-bottom:6px;"><span data-i18n="usersTitle">Manage users</span></h2>
+    <p style="font-size:0.8rem;color:var(--muted);margin:0 0 12px;line-height:1.5;" data-i18n="usersSub"></p>
+    <div class="drop-zone" id="usersDropzone">
+      <p><strong data-i18n="dropUsers">Drop the users Excel here</strong></p>
+      <p id="usersFname" style="margin-top:6px;"></p>
+      <input type="file" id="usersFileInput" accept=".xlsx,.xls,.csv" hidden>
+    </div>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px;">
+      <button class="btn" id="usersUpdateBtn" type="button" disabled data-i18n="usersUpdateBtn">Update users</button>
+      <span id="usersStatus" style="font-size:0.8rem;color:var(--muted);"></span>
+    </div>
   </div>
 
 </div><!-- /container -->
@@ -1416,7 +1432,16 @@ const AUTH_LABELS = {
   es: { loginSub:'Inicia sesión para continuar.', username:'Usuario', password:'Contraseña', pwToggle:'Mostrar/ocultar contraseña', remember:'Mantener la sesión iniciada', loginBtn:'Iniciar sesión', loggingIn:'Iniciando sesión…', loginMissing:'Introduce tu usuario y contraseña.', loginFailed:'Usuario desconocido o contraseña incorrecta.', loginGenericFail:'No se pudo iniciar sesión.', noConnection:'No se pudo conectar con el servidor.', sessionExpired:'Sesión caducada — vuelve a iniciar sesión.', loggedInAs:'Sesión iniciada como', logout:'Cerrar sesión', roleAdmin:'admin', roleUser:'usuario', uiLanguage:'Idioma de la aplicación', auto:'Automático' },
   it: { loginSub:'Accedi per continuare.', username:'Nome utente', password:'Password', pwToggle:'Mostra/nascondi password', remember:'Rimani connesso', loginBtn:'Accedi', loggingIn:'Accesso in corso…', loginMissing:'Inserisci nome utente e password.', loginFailed:'Nome utente sconosciuto o password errata.', loginGenericFail:'Accesso non riuscito.', noConnection:'Impossibile connettersi al server.', sessionExpired:'Sessione scaduta — accedi di nuovo.', loggedInAs:'Connesso come', logout:'Esci', roleAdmin:'admin', roleUser:'utente', uiLanguage:"Lingua dell'app", auto:'Automatico' },
 };
-for (const k of Object.keys(AUTH_LABELS)) Object.assign(UI_LABELS[k], AUTH_LABELS[k]);
+const USERS_LABELS = {
+  nl: { usersTitle:'Gebruikers beheren', usersSub:'Upload een Excel met kolommen USER, PW en ROLE (admin of user) om gebruikers toe te voegen of bij te werken. Bestaande gebruikers die niet in het bestand staan, blijven ongewijzigd.', dropUsers:'Sleep het Users-Excel hierheen of klik om te bladeren', usersUpdateBtn:'Users bijwerken', reading:'Bestand inlezen...', excelReadFail:'Kon het Excel-bestand niet lezen.', usersNoRows:'Geen bruikbare rijen gevonden — verwacht kolommen USER, PW en ROLE.', usersParsed:'{n} rijen ingelezen uit "{sheet}". Klik op "Users bijwerken" om te bevestigen.', updating:'Bezig met bijwerken...', updateFailed:'Bijwerken mislukt.', usersUpdated:'{u} van {t} gebruikers bijgewerkt.', errorsPrefix:'Fouten:' },
+  fr: { usersTitle:'Gérer les utilisateurs', usersSub:"Chargez un Excel avec les colonnes USER, PW et ROLE (admin ou user) pour ajouter ou mettre à jour des utilisateurs. Les utilisateurs existants absents du fichier restent inchangés.", dropUsers:"Glissez l'Excel des utilisateurs ici ou cliquez pour parcourir", usersUpdateBtn:'Mettre à jour les utilisateurs', reading:'Lecture du fichier...', excelReadFail:'Impossible de lire le fichier Excel.', usersNoRows:'Aucune ligne exploitable — colonnes attendues : USER, PW et ROLE.', usersParsed:'{n} lignes lues dans « {sheet} ». Cliquez sur « Mettre à jour les utilisateurs » pour confirmer.', updating:'Mise à jour en cours...', updateFailed:'La mise à jour a échoué.', usersUpdated:'{u} utilisateurs sur {t} mis à jour.', errorsPrefix:'Erreurs :' },
+  en: { usersTitle:'Manage users', usersSub:'Upload an Excel with columns USER, PW and ROLE (admin or user) to add or update users. Existing users not in the file remain unchanged.', dropUsers:'Drop the users Excel here or click to browse', usersUpdateBtn:'Update users', reading:'Reading file...', excelReadFail:'Could not read the Excel file.', usersNoRows:'No usable rows found — expected columns USER, PW and ROLE.', usersParsed:'{n} rows read from "{sheet}". Click "Update users" to confirm.', updating:'Updating...', updateFailed:'Update failed.', usersUpdated:'{u} of {t} users updated.', errorsPrefix:'Errors:' },
+  de: { usersTitle:'Benutzer verwalten', usersSub:'Laden Sie eine Excel-Datei mit den Spalten USER, PW und ROLE (admin oder user) hoch, um Benutzer hinzuzufügen oder zu aktualisieren. Bestehende Benutzer, die nicht in der Datei stehen, bleiben unverändert.', dropUsers:'Benutzer-Excel hierher ziehen oder klicken zum Durchsuchen', usersUpdateBtn:'Benutzer aktualisieren', reading:'Datei wird gelesen...', excelReadFail:'Die Excel-Datei konnte nicht gelesen werden.', usersNoRows:'Keine brauchbaren Zeilen gefunden — erwartet werden die Spalten USER, PW und ROLE.', usersParsed:'{n} Zeilen aus „{sheet}“ eingelesen. Klicken Sie auf „Benutzer aktualisieren“, um zu bestätigen.', updating:'Wird aktualisiert...', updateFailed:'Aktualisierung fehlgeschlagen.', usersUpdated:'{u} von {t} Benutzern aktualisiert.', errorsPrefix:'Fehler:' },
+  es: { usersTitle:'Gestionar usuarios', usersSub:'Sube un Excel con las columnas USER, PW y ROLE (admin o user) para añadir o actualizar usuarios. Los usuarios existentes que no figuren en el archivo no se modifican.', dropUsers:'Arrastra el Excel de usuarios aquí o haz clic para buscar', usersUpdateBtn:'Actualizar usuarios', reading:'Leyendo el archivo...', excelReadFail:'No se pudo leer el archivo Excel.', usersNoRows:'No se encontraron filas utilizables — se esperan las columnas USER, PW y ROLE.', usersParsed:'{n} filas leídas de «{sheet}». Haz clic en «Actualizar usuarios» para confirmar.', updating:'Actualizando...', updateFailed:'La actualización ha fallado.', usersUpdated:'{u} de {t} usuarios actualizados.', errorsPrefix:'Errores:' },
+  it: { usersTitle:'Gestisci utenti', usersSub:'Carica un Excel con le colonne USER, PW e ROLE (admin o user) per aggiungere o aggiornare utenti. Gli utenti esistenti non presenti nel file restano invariati.', dropUsers:"Trascina qui l'Excel degli utenti o fai clic per sfogliare", usersUpdateBtn:'Aggiorna utenti', reading:'Lettura del file...', excelReadFail:'Impossibile leggere il file Excel.', usersNoRows:'Nessuna riga utilizzabile — colonne attese: USER, PW e ROLE.', usersParsed:'{n} righe lette da «{sheet}». Fai clic su «Aggiorna utenti» per confermare.', updating:'Aggiornamento in corso...', updateFailed:'Aggiornamento non riuscito.', usersUpdated:'{u} utenti su {t} aggiornati.', errorsPrefix:'Errori:' },
+};
+for (const k of Object.keys(AUTH_LABELS)) Object.assign(UI_LABELS[k], AUTH_LABELS[k], USERS_LABELS[k]);
+const trv = (key, vars) => tr(key).replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
 
 const UI_LANG_NAMES = { nl:'Nederlands', fr:'Français', en:'English', de:'Deutsch', es:'Español', it:'Italiano' };
 let currentUiLang = 'en';
@@ -1495,6 +1520,7 @@ function showApp(username, role) {
   document.getElementById('appRoot').style.display = 'block';
   document.getElementById('topbarUser').textContent = username;
   document.getElementById('topbarRole').textContent = currentRole === 'admin' ? tr('roleAdmin') : tr('roleUser');
+  document.getElementById('usersCard').style.display = currentRole === 'admin' ? '' : 'none';
 }
 
 function showLogin(message) {
@@ -1563,6 +1589,59 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
   try { await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify({ mode: 'logout' }) }); } catch(e) {}
   showLogin();
 });
+
+// ─── USER MANAGEMENT (admin) ───────────────────────────────────────
+let parsedUserRows = [];
+(function() {
+  const zone = document.getElementById('usersDropzone');
+  const input = document.getElementById('usersFileInput');
+  const st = document.getElementById('usersStatus');
+  const btn = document.getElementById('usersUpdateBtn');
+  const setSt = (msg, color) => { st.textContent = msg || ''; st.style.color = color || 'var(--muted)'; };
+
+  async function handleUsersFile(file) {
+    document.getElementById('usersFname').textContent = file.name;
+    btn.disabled = true; parsedUserRows = []; setSt(tr('reading'));
+    let wb;
+    try {
+      const buf = await file.arrayBuffer();
+      wb = XLSX.read(buf, { type: 'array' });
+    } catch(e) { setSt(tr('excelReadFail'), '#c00'); return; }
+    const sheet = wb.SheetNames[0];
+    const raw = XLSX.utils.sheet_to_json(wb.Sheets[sheet], { defval: '', raw: false });
+    const rows = raw.map(r => {
+      const n = {};
+      for (const k in r) n[k.trim().toLowerCase()] = String(r[k] ?? '').trim();
+      return { username: n.user || '', password: n.pw || '', role: (n.role || '').toLowerCase() };
+    }).filter(r => r.username || r.password);
+    if (!rows.length) { setSt(tr('usersNoRows'), '#c00'); return; }
+    parsedUserRows = rows;
+    setSt(trv('usersParsed', { n: rows.length, sheet }));
+    btn.disabled = false;
+  }
+
+  zone.addEventListener('click', () => input.click());
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); if (e.dataTransfer.files.length) handleUsersFile(e.dataTransfer.files[0]); });
+  input.addEventListener('change', e => { if (e.target.files.length) handleUsersFile(e.target.files[0]); input.value = ''; });
+
+  btn.addEventListener('click', async () => {
+    if (!parsedUserRows.length) return;
+    btn.disabled = true; setSt(tr('updating'));
+    try {
+      const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify({ mode: 'admin_upsert_users', users: parsedUserRows }) });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) { showLogin(tr('sessionExpired')); return; }
+      if (!res.ok) { setSt(data.error || tr('updateFailed'), '#c00'); btn.disabled = false; return; }
+      let msg = trv('usersUpdated', { u: data.updated, t: data.total });
+      const hasErr = data.errors && data.errors.length;
+      if (hasErr) msg += ' ' + tr('errorsPrefix') + ' ' + data.errors.join('; ');
+      setSt(msg, hasErr ? '#c00' : '#2f7d4f');
+      parsedUserRows = [];
+    } catch(e) { setSt(tr('noConnection'), '#c00'); btn.disabled = false; }
+  });
+})();
 
 // ─── INIT ──────────────────────────────────────────────────────────
 addParticipant();

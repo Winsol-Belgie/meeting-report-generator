@@ -111,6 +111,30 @@ export default {
       return new Response(JSON.stringify({ error: 'Not authenticated.' }), { status: 401, headers: { ...CORS, 'Content-Type': 'application/json' } });
     }
 
+    // ── Admin: upsert users from Excel (columns USER / PW / ROLE) ─────
+    if (body.mode === 'admin_upsert_users') {
+      const jsonRes = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+      if (session.role !== 'admin') return jsonRes({ error: 'Admin only.' }, 403);
+      if (!env.PASSWORD_PEPPER) return jsonRes({ error: 'PASSWORD_PEPPER not configured.' }, 500);
+      const users = Array.isArray(body.users) ? body.users : [];
+      if (!users.length) return jsonRes({ error: 'No users received.' }, 400);
+      let updated = 0;
+      const errors = [];
+      for (const raw of users) {
+        const username = (raw.username || '').trim();
+        const password = (raw.password || '').trim();
+        const role = (raw.role || '').trim().toLowerCase();
+        if (!username || !password) { errors.push(`${username || '(no username)'}: username or password missing — skipped.`); continue; }
+        if (role !== 'admin' && role !== 'user') { errors.push(`${username}: unknown role "${raw.role || ''}" (expected admin or user) — skipped.`); continue; }
+        try {
+          const passwordHash = await sha256Hex(password + env.PASSWORD_PEPPER);
+          await env.MEETING_KV.put('user:' + username, JSON.stringify({ username, passwordHash, role }));
+          updated++;
+        } catch (err) { errors.push(`${username}: ${err.message}`); }
+      }
+      return jsonRes({ updated, total: users.length, errors });
+    }
+
     // ── TTS route ──────────────────────────────────────────────────────
     if (url.pathname === '/tts') {
       if (!body.text && !body.ssmlContent) {
