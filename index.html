@@ -174,13 +174,16 @@
       justify-content: center;
       margin: 6px 0;
     }
-    #generateBtn {
+    #generateBtn, #reportStopBtn {
       padding: 12px 40px;
       font-size: 1rem;
       font-weight: 700;
       border-radius: 10px;
       min-width: 200px;
+      justify-content: center;
     }
+    #reportStopBtn { background: #fff; color: #c00; border: 1px solid #c00; cursor: pointer; }
+    #reportStopBtn:hover { background: #fee2e2; }
     #generateBtn:disabled { opacity: 0.55; cursor: not-allowed; }
 
     /* Report output */
@@ -488,7 +491,7 @@
     <button id="generateBtn" class="primary" onclick="generate()">
       ⚡ <span data-i18n="generateReport">Generate report</span>
     </button>
-    <button id="reportStopBtn" class="btn-outline" onclick="stopReport()" style="display:none;margin-top:8px;color:#c00;border-color:#c00;">
+    <button id="reportStopBtn" onclick="stopReport()" style="display:none;">
       ⏹ <span data-i18n="stopGenerating">Stop generating</span>
     </button>
   </div>
@@ -1321,8 +1324,8 @@ function setGenerating(on) {
   const btn     = document.getElementById('generateBtn');
   const stopBtn = document.getElementById('reportStopBtn');
   btn.disabled = on;
-  btn.textContent = on ? '↻ Generating…' : '⚡ Generate report';
-  stopBtn.style.display = on ? 'inline-block' : 'none';
+  btn.style.display = on ? 'none' : '';
+  stopBtn.style.display = on ? '' : 'none';
 }
 function showError(msg) {
   const el = document.getElementById('errorBanner');
