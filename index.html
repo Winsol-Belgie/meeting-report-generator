@@ -1080,7 +1080,7 @@ function markdownToSSMLContent(md) {
     const h = line.match(/^#{1,6}\s+(.+)$/);
     if (h) {
       flushPara();
-      parts.push(`<break time="900ms"/><prosody rate="slow"><emphasis level="moderate">${escapeXML(cleanInline(h[1]))}</emphasis></prosody><break time="600ms"/>`);
+      parts.push(`<break time="700ms"/>${escapeXML(cleanInline(h[1]))}<break time="400ms"/>`);
     } else if (/^---+$/.test(line.trim())) {
       flushPara();
       parts.push('<break time="600ms"/>');
