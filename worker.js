@@ -39,8 +39,8 @@ export default {
 
     // ── TTS route ──────────────────────────────────────────────────────
     if (url.pathname === '/tts') {
-      if (!body.text) {
-        return new Response('Missing text', { status: 400, headers: CORS });
+      if (!body.text && !body.ssmlContent) {
+        return new Response('Missing text or ssmlContent', { status: 400, headers: CORS });
       }
 
       // Dutch → Azure TTS (native Flemish voice)
@@ -52,24 +52,23 @@ export default {
           );
         }
         const azureVoice = body.voice === 'male' ? 'nl-BE-ArnaudNeural' : 'nl-BE-DenaNeural';
-        const safeText = body.text
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#39;')
-          .replace(/[\r\n]+/g, ' ')
-          .replace(/---+/g, '')
-          .trim();
-        const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="nl-BE"><voice name="${azureVoice}">${safeText}</voice></speak>`;
+        // ssmlContent already has SSML tags; text is plain and needs escaping
+        const voiceBody = body.ssmlContent
+          ? body.ssmlContent
+          : (body.text || '')
+              .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+              .replace(/[\r\n]+/g, ' ').replace(/---+/g, '').trim();
+        const ssml = `<speak version='1.0' xml:lang='nl-BE'><voice name='${azureVoice}'>${voiceBody}</voice></speak>`;
         let azureRes;
         try {
           azureRes = await fetch('https://westeurope.tts.speech.microsoft.com/cognitiveservices/v1', {
             method: 'POST',
             headers: {
               'Ocp-Apim-Subscription-Key': env.AZURE_SPEECH_KEY,
-              'Content-Type': 'application/ssml+xml',
+              'Content-Type': 'application/ssml+xml; charset=utf-8',
               'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3',
+              'User-Agent': 'WinsolMeetingReport/1.0',
             },
             body: ssml,
           });
@@ -81,8 +80,10 @@ export default {
         }
         if (!azureRes.ok) {
           const text = await azureRes.text();
+          const hdrs = {};
+          azureRes.headers.forEach((v, k) => { hdrs[k] = v; });
           return new Response(
-            JSON.stringify({ error: `Azure ${azureRes.status}: ${text}`, ssml }),
+            JSON.stringify({ error: `Azure ${azureRes.status}: ${text}`, headers: hdrs, ssml }),
             { status: azureRes.status, headers: { ...CORS, 'Content-Type': 'application/json' } }
           );
         }
