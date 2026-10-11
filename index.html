@@ -1139,9 +1139,19 @@ function toggleEdit() {
 
 // ─── AUDIO / TTS ───────────────────────────────────────────────────
 // Convert markdown to SSML content (for Azure TTS — Dutch)
+// Pronunciation fixes for Azure nl-BE voices: [regex on the written word, spoken alias].
+// Add a line here whenever a word is mispronounced.
+const NL_PRONUNCIATIONS = [
+  [/\bconnector(en|s)?\b/gi, (m, suf) => 'konnektor' + (suf === 's' ? 's' : suf ? 'en' : '')],
+];
+
 function markdownToSSMLContent(md) {
   function escapeXML(t) {
-    return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    let out = t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    for (const [re, alias] of NL_PRONUNCIATIONS) {
+      out = out.replace(re, (...a) => `<sub alias="${typeof alias === 'function' ? alias(...a) : alias}">${a[0]}</sub>`);
+    }
+    return out;
   }
   function cleanInline(t) {
     return t.replace(/\*\*(.+?)\*\*/g,'$1').replace(/\*(.+?)\*/g,'$1')
@@ -1180,16 +1190,27 @@ function markdownToSSMLContent(md) {
 }
 
 // Split SSML content into chunks by section (at <break time="800ms"/> boundaries)
-function chunkSSML(ssmlContent, maxChars = 2000) {
-  const sections = ssmlContent.split(/(?=<break time="800ms"\/>)/);
+function chunkSSML(ssmlContent, maxChars = 1200) {
+  // Split on line boundaries (one line = one paragraph/heading/break), and long
+  // paragraphs on sentence boundaries, so no chunk gets too long for Azure.
+  const units = [];
+  for (const line of ssmlContent.split('\n')) {
+    if (line.length <= maxChars) { units.push(line); continue; }
+    let cur = '';
+    for (const sent of line.split(/(?<=[.!?])\s+/)) {
+      if (cur && (cur + ' ' + sent).length > maxChars) { units.push(cur); cur = sent; }
+      else cur += (cur ? ' ' : '') + sent;
+    }
+    if (cur) units.push(cur);
+  }
   const chunks = [];
   let current = '';
-  for (const s of sections) {
-    if ((current + s).length > maxChars && current) {
+  for (const u of units) {
+    if (current && (current + '\n' + u).length > maxChars) {
       chunks.push(current.trim());
-      current = s;
+      current = u;
     } else {
-      current += s;
+      current += (current ? '\n' : '') + u;
     }
   }
   if (current.trim()) chunks.push(current.trim());
@@ -1257,7 +1278,7 @@ async function generateAudio() {
 
   // Build chunks: SSML-rich for Azure, plain text for OpenAI
   const chunks = isAzure
-    ? chunkSSML(markdownToSSMLContent(reportMarkdown), 2000)
+    ? chunkSSML(markdownToSSMLContent(reportMarkdown), 1200)
     : chunkText(stripMarkdown(reportMarkdown), 4000);
 
   try {
