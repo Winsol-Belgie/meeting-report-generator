@@ -1282,25 +1282,44 @@ async function generateAudio() {
   // Build chunks: SSML-rich for Azure, plain text for OpenAI
   const chunks = isAzure
     ? chunkSSML(markdownToSSMLContent(reportMarkdown), 1200)
-    : chunkText(stripMarkdown(reportMarkdown), 4000);
+    : chunkText(stripMarkdown(reportMarkdown), 2000);
 
   try {
-    const blobs = [];
-    for (const chunk of chunks) {
-      if (signal.aborted) break;
+    const blobs = new Array(chunks.length);
+    let done = 0, next = 0;
+    const setProgress = () => { btn.textContent = `⏳ ${done}/${chunks.length}`; };
+    setProgress();
+
+    async function fetchChunk(i) {
       const body = isAzure
-        ? { ssmlContent: chunk, voice, lang }
-        : { text: chunk, voice, lang };
-      const res = await fetch(TTS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify(body),
-        signal,
-      });
-      if (!res.ok) throw new Error('TTS error ' + res.status + ': ' + await res.text());
-      blobs.push(await res.blob());
+        ? { ssmlContent: chunks[i], voice, lang }
+        : { text: chunks[i], voice, lang };
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const res = await fetch(TTS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify(body),
+          signal,
+        });
+        if (res.ok) { blobs[i] = await res.blob(); return; }
+        if ((res.status === 429 || res.status >= 500) && attempt < 2) {
+          await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+          continue;
+        }
+        throw new Error('TTS error ' + res.status + ': ' + await res.text());
+      }
     }
-    if (blobs.length === 0) return;
+
+    // Azure (free tier): sequential to avoid rate limits. OpenAI: 4 chunks in parallel.
+    const concurrency = isAzure ? 1 : 4;
+    await Promise.all(Array.from({ length: Math.min(concurrency, chunks.length) }, async () => {
+      while (next < chunks.length && !signal.aborted) {
+        const i = next++;
+        await fetchChunk(i);
+        done++; setProgress();
+      }
+    }));
+    if (signal.aborted || blobs.some(b => !b)) return;
 
     const combined = new Blob(blobs, { type: 'audio/mpeg' });
     const url = URL.createObjectURL(combined);
