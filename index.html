@@ -272,10 +272,56 @@
     }
     .lang-btn:hover { border-color: var(--brand); color: var(--text); }
     .lang-btn.active { background: var(--brand); border-color: var(--brand); color: #111; font-weight: 700; }
+
+    /* ── Login screen ─────────────────────────────────────────────── */
+    #loginScreen { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; background:var(--bg); }
+    .login-card { background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:32px 28px; max-width:360px; width:100%; text-align:center; box-shadow: 0 4px 24px rgba(0,0,0,.08); }
+    .login-card .login-logo { width:56px; height:56px; margin-bottom:12px; }
+    .login-card h1 { font-size:20px; margin:0 0 4px; color:var(--text); }
+    .login-card .login-sub { color:var(--muted); font-size:13px; margin:0 0 20px; }
+    .login-form { display:flex; flex-direction:column; gap:12px; text-align:left; }
+    .login-form input[type=text], .login-form input[type=password] { width:100%; box-sizing:border-box; border:1px solid var(--border); border-radius:9px; padding:10px 12px; font-family:inherit; font-size:14px; background:var(--bg); color:var(--text); }
+    .login-form input:focus { outline:2px solid var(--brand); outline-offset:1px; }
+    .login-pw-wrap { position:relative; }
+    .login-pw-wrap input { padding-right:38px !important; }
+    .login-pw-eye { position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--muted); font-size:16px; padding:4px; }
+    .login-remember { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); cursor:pointer; }
+    .login-remember input { margin:0; }
+    .login-btn { width:100%; }
+    .login-error { color:#c00; font-size:13px; min-height:16px; }
+    #appRoot { display:none; }
+    .topbar { display:flex; justify-content:flex-end; align-items:center; gap:12px; padding:8px 0 0; font-size:13px; color:var(--muted); }
+    .topbar b { color:var(--text); }
+    .topbar .btn-outline { padding:5px 12px; font-size:12px; }
   </style>
 </head>
 
 <body>
+<div id="loginScreen">
+  <div class="login-card">
+    <img src="Winsol_Avatar_150px.png" class="login-logo" alt="Winsol" onerror="this.style.display='none'">
+    <h1>Meeting Report Generator</h1>
+    <p class="login-sub">Log in to continue / Aanmelden om verder te gaan</p>
+    <div class="login-form">
+      <input type="text" id="loginUsername" placeholder="Username / Gebruikersnaam" autocomplete="username">
+      <div class="login-pw-wrap">
+        <input type="password" id="loginPassword" placeholder="Password / Wachtwoord" autocomplete="current-password">
+        <button type="button" id="loginPwToggle" class="login-pw-eye" title="Show/hide password">👁</button>
+      </div>
+      <label class="login-remember">
+        <input type="checkbox" id="loginRemember">
+        <span>Stay signed in / Aangemeld blijven</span>
+      </label>
+      <button class="btn" id="loginSubmitBtn" type="button">Sign in / Aanmelden</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+  </div>
+</div>
+<div id="appRoot">
+  <div class="topbar">
+    <span>Signed in as <b id="topbarUser"></b></span>
+    <button class="btn-outline" id="logoutBtn" type="button">Sign out / Afmelden</button>
+  </div>
 <div class="container">
 
   <!-- ══ HERO ═══════════════════════════════════════════════════════ -->
@@ -510,6 +556,7 @@
   </svg>
   No data is stored. Uploaded files are processed in memory and immediately discarded after the report is generated. Nothing is saved locally, in your browser, or in cookies.
 </footer>
+</div><!-- /appRoot -->
 
 
 <!-- ══ JAVASCRIPT ═════════════════════════════════════════════════ -->
@@ -927,7 +974,7 @@ async function generate() {
   try {
     const res = await fetch(WORKER_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({
         system:   buildSystemPrompt(p),
         messages: [{ role: 'user', content: buildUserMessage() }],
@@ -1210,7 +1257,7 @@ async function generateAudio() {
         : { text: chunk, voice, lang };
       const res = await fetch(TTS_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(body),
         signal,
       });
@@ -1404,6 +1451,86 @@ function setUiLang(lang) {
   try { localStorage.setItem('uiLang', resolved); } catch(e) {}
 }
 
+// ─── AUTH ──────────────────────────────────────────────────────────
+const AUTH_TOKEN_KEY = 'meetingreport_token';
+let _authToken = '';
+
+function authHeaders() {
+  return _authToken ? { 'X-Auth-Token': _authToken } : {};
+}
+
+function showApp(username) {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appRoot').style.display = 'block';
+  document.getElementById('topbarUser').textContent = username;
+}
+
+function showLogin(message) {
+  _authToken = '';
+  try { localStorage.removeItem(AUTH_TOKEN_KEY); sessionStorage.removeItem(AUTH_TOKEN_KEY); } catch(e) {}
+  document.getElementById('appRoot').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginError').textContent = message || '';
+  document.getElementById('loginPassword').value = '';
+}
+
+async function doLogin() {
+  const username = document.getElementById('loginUsername').value.trim();
+  const password  = document.getElementById('loginPassword').value;
+  const remember  = document.getElementById('loginRemember').checked;
+  const errorEl   = document.getElementById('loginError');
+  const submitBtn = document.getElementById('loginSubmitBtn');
+  errorEl.textContent = '';
+  if (!username || !password) { errorEl.textContent = 'Enter username and password.'; return; }
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Signing in…';
+  try {
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'login', username, password, remember }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { errorEl.textContent = data.error || 'Sign-in failed.'; return; }
+    _authToken = data.token;
+    try { (remember ? localStorage : sessionStorage).setItem(AUTH_TOKEN_KEY, _authToken); } catch(e) {}
+    showApp(data.username);
+  } catch(e) {
+    errorEl.textContent = 'Could not connect to server.';
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Sign in / Aanmelden';
+  }
+}
+
+async function tryRestoreSession() {
+  let token = '';
+  try { token = localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY) || ''; } catch(e) {}
+  if (!token) { showLogin(); return; }
+  _authToken = token;
+  try {
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Auth-Token': token },
+      body: JSON.stringify({ mode: 'auth_me' }),
+    });
+    if (res.ok) { const d = await res.json(); showApp(d.username); }
+    else showLogin();
+  } catch(e) { showLogin(); }
+}
+
+document.getElementById('loginSubmitBtn').addEventListener('click', doLogin);
+document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); });
+document.getElementById('loginPwToggle').addEventListener('click', () => {
+  const pw = document.getElementById('loginPassword');
+  pw.type = pw.type === 'password' ? 'text' : 'password';
+});
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  try { await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify({ mode: 'logout' }) }); } catch(e) {}
+  showLogin();
+});
+
 // ─── INIT ──────────────────────────────────────────────────────────
 addParticipant();
 
@@ -1417,6 +1544,8 @@ addParticipant();
   }
   setUiLang(lang);
 })();
+
+tryRestoreSession();
 
 // Show/hide correct voice selector based on report language
 document.getElementById('reportLang').addEventListener('change', function() {

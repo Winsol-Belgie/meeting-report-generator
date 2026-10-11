@@ -13,8 +13,66 @@
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Auth-Token',
 };
+
+// ── Auth ───────────────────────────────────────────────────────────
+const TOKEN_KEY_PREFIX = 'session:';
+const SESSION_TTL_REMEMBER = 60 * 60 * 24 * 30; // 30 days
+const SESSION_TTL_DEFAULT  = 60 * 60 * 12;       // 12 hours
+
+async function sha256Hex(str) {
+  const data = new TextEncoder().encode(str);
+  const buf  = await crypto.subtle.digest('SHA-256', data);
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function randomToken() {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return [...bytes].map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function getSession(request, env) {
+  const token = request.headers.get('X-Auth-Token') || '';
+  if (!token) return null;
+  const raw = await env.MEETING_KV.get(TOKEN_KEY_PREFIX + token);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+async function handleLogin(body, env) {
+  const username = (body.username || '').trim();
+  const password  = body.password  || '';
+  const remember  = !!body.remember;
+  if (!username || !password) {
+    return new Response(JSON.stringify({ error: 'Username and password are required.' }), { status: 400, headers: { ...CORS, 'Content-Type': 'application/json' } });
+  }
+  if (!env.PASSWORD_PEPPER) {
+    return new Response(JSON.stringify({ error: 'PASSWORD_PEPPER not configured.' }), { status: 500, headers: { ...CORS, 'Content-Type': 'application/json' } });
+  }
+  const userRaw = await env.MEETING_KV.get('user:' + username);
+  if (!userRaw) {
+    return new Response(JSON.stringify({ error: 'Unknown username or wrong password.' }), { status: 401, headers: { ...CORS, 'Content-Type': 'application/json' } });
+  }
+  let user;
+  try { user = JSON.parse(userRaw); } catch {
+    return new Response(JSON.stringify({ error: 'Unknown username or wrong password.' }), { status: 401, headers: { ...CORS, 'Content-Type': 'application/json' } });
+  }
+  const hash = await sha256Hex(password + env.PASSWORD_PEPPER);
+  if (hash !== user.passwordHash) {
+    return new Response(JSON.stringify({ error: 'Unknown username or wrong password.' }), { status: 401, headers: { ...CORS, 'Content-Type': 'application/json' } });
+  }
+  const token = randomToken();
+  const ttl   = remember ? SESSION_TTL_REMEMBER : SESSION_TTL_DEFAULT;
+  await env.MEETING_KV.put(TOKEN_KEY_PREFIX + token, JSON.stringify({ username: user.username, role: user.role }), { expirationTtl: ttl });
+  return new Response(JSON.stringify({ token, username: user.username, role: user.role }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
+}
+
+async function handleLogout(request, env) {
+  const token = request.headers.get('X-Auth-Token') || '';
+  if (token) await env.MEETING_KV.delete(TOKEN_KEY_PREFIX + token);
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
+}
 
 export default {
   async fetch(request, env) {
@@ -36,6 +94,22 @@ export default {
     }
 
     const url = new URL(request.url);
+
+    // ── Auth routes (no session required) ─────────────────────────────
+    if (body.mode === 'login')    return handleLogin(body, env);
+    if (body.mode === 'logout')   return handleLogout(request, env);
+    if (body.mode === 'auth_me') {
+      const session = await getSession(request, env);
+      return session
+        ? new Response(JSON.stringify({ username: session.username, role: session.role }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } })
+        : new Response(JSON.stringify({ error: 'Not authenticated.' }), { status: 401, headers: { ...CORS, 'Content-Type': 'application/json' } });
+    }
+
+    // ── All other routes require a valid session ───────────────────────
+    const session = await getSession(request, env);
+    if (!session) {
+      return new Response(JSON.stringify({ error: 'Not authenticated.' }), { status: 401, headers: { ...CORS, 'Content-Type': 'application/json' } });
+    }
 
     // ── TTS route ──────────────────────────────────────────────────────
     if (url.pathname === '/tts') {
