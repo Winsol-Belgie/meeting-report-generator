@@ -524,21 +524,10 @@
       <audio id="reportAudio" controls style="width:100%;border-radius:8px;"></audio>
       <div style="display:flex;gap:8px;margin-top:6px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:0.78rem;color:var(--muted);">Voice:</span>
-        <select id="ttsVoice" class="field-input" style="width:auto;font-size:0.78rem;padding:4px 8px;">
-          <option value="nova">Nova (vrouw)</option>
-          <option value="shimmer">Shimmer (vrouw, warm)</option>
-          <option value="coral">Coral (vrouw, helder)</option>
-          <option value="echo">Echo (man)</option>
-          <option value="onyx">Onyx (man, diep)</option>
-          <option value="sage">Sage (man, rustig)</option>
+        <select id="azureVoice" class="field-input" style="width:auto;font-size:0.78rem;padding:4px 8px;">
+          <option value="female">♀ Female</option>
+          <option value="male">♂ Male</option>
         </select>
-        <span id="azureVoiceWrap" style="display:none;gap:4px;align-items:center;">
-          <span style="font-size:0.78rem;color:var(--muted);">Stem (NL):</span>
-          <select id="azureVoice" class="field-input" style="width:auto;font-size:0.78rem;padding:4px 8px;">
-            <option value="female">Dena (vrouw, Vlaams)</option>
-            <option value="male">Arnaud (man, Vlaams)</option>
-          </select>
-        </span>
         <button class="btn-outline" onclick="generateAudio()" style="font-size:0.78rem;padding:5px 10px;">↺ Regenerate</button>
         <a id="audioDownload" class="btn-outline" style="font-size:0.78rem;padding:5px 10px;text-decoration:none;" download="Meeting Report.mp3">⬇ MP3</a>
       </div>
@@ -1148,10 +1137,10 @@ const NL_PRONUNCIATIONS = [
   [/\bconnector(en|s)?\b/gi, (m, suf) => 'konnektor' + (suf === 's' ? 's' : suf ? 'en' : '')],
 ];
 
-function markdownToSSMLContent(md) {
+function markdownToSSMLContent(md, lang) {
   function escapeXML(t) {
     let out = t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-    for (const [re, alias] of NL_PRONUNCIATIONS) {
+    for (const [re, alias] of (lang === 'Dutch' ? NL_PRONUNCIATIONS : [])) {
       out = out.replace(re, (...a) => `<sub alias="${typeof alias === 'function' ? alias(...a) : alias}">${a[0]}</sub>`);
     }
     return out;
@@ -1273,16 +1262,11 @@ async function generateAudio() {
   const signal = audioAbort.signal;
 
   const lang    = document.getElementById('reportLang').value;
-  const isAzure = lang === 'Dutch';
-  const voice   = isAzure
-    ? document.getElementById('azureVoice').value
-    : document.getElementById('ttsVoice').value;
+  const voice   = document.getElementById('azureVoice').value;
   const TTS_URL = WORKER_URL.replace(/\/$/, '') + '/tts';
 
   // Build chunks: SSML-rich for Azure, plain text for OpenAI
-  const chunks = isAzure
-    ? chunkSSML(markdownToSSMLContent(reportMarkdown), 1200)
-    : chunkText(stripMarkdown(reportMarkdown), 2000);
+  const chunks = chunkSSML(markdownToSSMLContent(reportMarkdown, lang), 1200);
 
   try {
     const blobs = new Array(chunks.length);
@@ -1291,10 +1275,8 @@ async function generateAudio() {
     setProgress();
 
     async function fetchChunk(i) {
-      const body = isAzure
-        ? { ssmlContent: chunks[i], voice, lang }
-        : { text: chunks[i], voice, lang };
-      for (let attempt = 0; attempt < 3; attempt++) {
+      const body = { ssmlContent: chunks[i], voice, lang };
+      for (let attempt = 0; attempt < 4; attempt++) {
         const res = await fetch(TTS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
@@ -1302,16 +1284,16 @@ async function generateAudio() {
           signal,
         });
         if (res.ok) { blobs[i] = await res.blob(); return; }
-        if ((res.status === 429 || res.status >= 500) && attempt < 2) {
-          await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+        if ((res.status === 429 || res.status >= 500) && attempt < 3) {
+          await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
           continue;
         }
         throw new Error('TTS error ' + res.status + ': ' + await res.text());
       }
     }
 
-    // Azure (free tier): sequential to avoid rate limits. OpenAI: 4 chunks in parallel.
-    const concurrency = isAzure ? 1 : 4;
+    // Azure: 2 chunks in parallel (retry with back-off on rate limits).
+    const concurrency = 2;
     await Promise.all(Array.from({ length: Math.min(concurrency, chunks.length) }, async () => {
       while (next < chunks.length && !signal.aborted) {
         const i = next++;
@@ -1694,12 +1676,6 @@ setUiLang(uiLangSetting());
 
 tryRestoreSession();
 
-// Show/hide correct voice selector based on report language
-document.getElementById('reportLang').addEventListener('change', function() {
-  const isDutch = this.value === 'Dutch';
-  document.getElementById('ttsVoice').closest('select').style.display = isDutch ? 'none' : '';
-  document.getElementById('azureVoiceWrap').style.display = isDutch ? 'flex' : 'none';
-});
 </script>
 </body>
 </html>

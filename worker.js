@@ -3,11 +3,14 @@
  *
  * Secrets required (Cloudflare dashboard → Worker → Settings → Variables & Secrets):
  *   ANTHROPIC_API_KEY   — for report generation
- *   OPENAI_API_KEY      — for audio (TTS)
+ *   AZURE_SPEECH_KEY    — for audio (Azure Neural TTS, all languages)
+ *   PASSWORD_PEPPER     — for password hashes
+ * Optional variable:
+ *   CLAUDE_MODEL        — overrides the default Claude model (claude-sonnet-4-6)
  *
  * Routes:
  *   POST /      → Anthropic Claude (report generation, streaming)
- *   POST /tts   → OpenAI TTS (text-to-speech, returns mp3)
+ *   POST /tts   → Azure Neural TTS (text-to-speech, returns mp3)
  */
 
 const CORS = {
@@ -141,103 +144,57 @@ export default {
         return new Response('Missing text or ssmlContent', { status: 400, headers: CORS });
       }
 
-      // Dutch → Azure TTS (native Flemish voice)
-      if (body.lang === 'Dutch') {
-        if (!env.AZURE_SPEECH_KEY) {
-          return new Response(
-            JSON.stringify({ error: 'AZURE_SPEECH_KEY not configured in Worker secrets.' }),
-            { status: 500, headers: { ...CORS, 'Content-Type': 'application/json' } }
-          );
-        }
-        const azureVoice = body.voice === 'male' ? 'nl-BE-ArnaudNeural' : 'nl-BE-DenaNeural';
-        // ssmlContent already has SSML tags; text is plain and needs escaping
-        const voiceBody = body.ssmlContent
-          ? body.ssmlContent
-          : (body.text || '')
-              .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-              .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
-              .replace(/[\r\n]+/g, ' ').replace(/---+/g, '').trim();
-        const ssml = `<speak version='1.0' xml:lang='nl-BE'><voice name='${azureVoice}'>${voiceBody}</voice></speak>`;
-        let azureRes;
-        try {
-          azureRes = await fetch('https://westeurope.tts.speech.microsoft.com/cognitiveservices/v1', {
-            method: 'POST',
-            headers: {
-              'Ocp-Apim-Subscription-Key': env.AZURE_SPEECH_KEY,
-              'Content-Type': 'application/ssml+xml; charset=utf-8',
-              'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3',
-              'User-Agent': 'WinsolMeetingReport/1.0',
-            },
-            body: ssml,
-          });
-        } catch (err) {
-          return new Response(
-            JSON.stringify({ error: `Azure TTS failed: ${err.message}` }),
-            { status: 502, headers: { ...CORS, 'Content-Type': 'application/json' } }
-          );
-        }
-        if (!azureRes.ok) {
-          const text = await azureRes.text();
-          const hdrs = {};
-          azureRes.headers.forEach((v, k) => { hdrs[k] = v; });
-          return new Response(
-            JSON.stringify({ error: `Azure ${azureRes.status}: ${text}`, headers: hdrs, ssml }),
-            { status: azureRes.status, headers: { ...CORS, 'Content-Type': 'application/json' } }
-          );
-        }
-        return new Response(azureRes.body, { headers: { ...CORS, 'Content-Type': 'audio/mpeg' } });
-      }
-
-      // Other languages → OpenAI TTS
-      if (!env.OPENAI_API_KEY) {
+      // All languages → Azure Neural TTS (OpenAI TTS models are retired on 2027-01-06)
+      if (!env.AZURE_SPEECH_KEY) {
         return new Response(
-          JSON.stringify({ error: 'OPENAI_API_KEY not configured in Worker secrets.' }),
+          JSON.stringify({ error: 'AZURE_SPEECH_KEY not configured in Worker secrets.' }),
           { status: 500, headers: { ...CORS, 'Content-Type': 'application/json' } }
         );
       }
-      const langInstructions = {
-        'French':  'Speak in French. Use a natural, clear French accent. Read at a calm, professional pace.',
-        'English': 'Speak in English. Use a clear, professional tone. Read at a calm pace.',
-        'German':  'Speak in German. Use a natural, clear German accent. Read at a calm, professional pace.',
-        'Spanish': 'Speak in Spanish. Use a natural, clear Spanish accent. Read at a calm, professional pace.',
-        'Italian': 'Speak in Italian. Use a natural, clear Italian accent. Read at a calm, professional pace.',
+      const VOICES = {
+        Dutch:   { locale: 'nl-BE', female: 'nl-BE-DenaNeural',     male: 'nl-BE-ArnaudNeural' },
+        French:  { locale: 'fr-FR', female: 'fr-FR-DeniseNeural',   male: 'fr-FR-HenriNeural' },
+        English: { locale: 'en-GB', female: 'en-GB-SoniaNeural',    male: 'en-GB-RyanNeural' },
+        German:  { locale: 'de-DE', female: 'de-DE-KatjaNeural',    male: 'de-DE-ConradNeural' },
+        Spanish: { locale: 'es-ES', female: 'es-ES-ElviraNeural',   male: 'es-ES-AlvaroNeural' },
+        Italian: { locale: 'it-IT', female: 'it-IT-ElsaNeural',     male: 'it-IT-DiegoNeural' },
       };
-      const ttsInstruction = langInstructions[body.lang] || 'Speak clearly and professionally.';
-
-      let ttsRes;
+      const v = VOICES[body.lang] || VOICES.English;
+      const azureVoice = body.voice === 'male' ? v.male : v.female;
+      // ssmlContent already has SSML tags; text is plain and needs escaping
+      const voiceBody = body.ssmlContent
+        ? body.ssmlContent
+        : (body.text || '')
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+            .replace(/[\r\n]+/g, ' ').replace(/---+/g, '').trim();
+      const ssml = `<speak version='1.0' xml:lang='${v.locale}'><voice name='${azureVoice}'>${voiceBody}</voice></speak>`;
+      let azureRes;
       try {
-        ttsRes = await fetch('https://api.openai.com/v1/audio/speech', {
+        azureRes = await fetch('https://westeurope.tts.speech.microsoft.com/cognitiveservices/v1', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
-            'Content-Type': 'application/json',
+            'Ocp-Apim-Subscription-Key': env.AZURE_SPEECH_KEY,
+            'Content-Type': 'application/ssml+xml; charset=utf-8',
+            'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3',
+            'User-Agent': 'WinsolMeetingReport/1.0',
           },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini-tts',
-            input: body.text,
-            voice: body.voice || 'nova',
-            instructions: ttsInstruction,
-            response_format: 'mp3',
-          }),
+          body: ssml,
         });
       } catch (err) {
         return new Response(
-          JSON.stringify({ error: `TTS fetch failed: ${err.message}` }),
+          JSON.stringify({ error: `Azure TTS failed: ${err.message}` }),
           { status: 502, headers: { ...CORS, 'Content-Type': 'application/json' } }
         );
       }
-
-      if (!ttsRes.ok) {
-        const text = await ttsRes.text();
-        return new Response(text, {
-          status: ttsRes.status,
-          headers: { ...CORS, 'Content-Type': 'application/json' },
-        });
+      if (!azureRes.ok) {
+        const text = await azureRes.text();
+        return new Response(
+          JSON.stringify({ error: `Azure ${azureRes.status}: ${text}` }),
+          { status: azureRes.status, headers: { ...CORS, 'Content-Type': 'application/json' } }
+        );
       }
-
-      return new Response(ttsRes.body, {
-        headers: { ...CORS, 'Content-Type': 'audio/mpeg' },
-      });
+      return new Response(azureRes.body, { headers: { ...CORS, 'Content-Type': 'audio/mpeg' } });
     }
 
     // ── Anthropic route (default) ──────────────────────────────────────
@@ -255,7 +212,7 @@ export default {
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: env.CLAUDE_MODEL || 'claude-sonnet-4-6',
           max_tokens: 8000,
           stream: true,
           system: body.system,
